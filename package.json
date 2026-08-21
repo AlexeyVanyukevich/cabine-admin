@@ -1,0 +1,14 @@
+{
+  "name": "cabins-admin",
+  "private": true,
+  "type": "module",
+  "workspaces": ["server", "web"],
+  "engines": { "node": ">=24.0.0" },
+  "scripts": {
+    "test": "npm run --workspace server test",
+    "build": "npm run --workspace server build && npm run --workspace web build",
+    "check": "./run check"
+  },
+  "devDependencies": { "prettier": "^3.9.6", "typescript": "^7.0.2" },
+  "overrides": { "brace-expansion": "^5.0.8" }
+}

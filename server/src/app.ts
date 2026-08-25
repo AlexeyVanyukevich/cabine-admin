@@ -3,17 +3,20 @@ import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox'
 import type { Kysely } from 'kysely'
 import type { Config } from './config.js'
 import type { Database } from './db/schema.js'
+import type { EngineClient } from './engine/client.js'
 import { registerErrorHandler } from './shared/errors.js'
 
 export interface AppDeps {
   config: Config
   db: Kysely<Database>
+  engine: EngineClient
 }
 
 declare module 'fastify' {
   interface FastifyInstance {
     db: Kysely<Database>
     config: Config
+    engine: EngineClient
   }
 }
 
@@ -30,6 +33,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   app.decorate('db', deps.db)
   app.decorate('config', deps.config)
+  app.decorate('engine', deps.engine)
   registerErrorHandler(app)
 
   app.get('/api/health', { config: { public: true } }, async () => ({ status: 'ok' }))

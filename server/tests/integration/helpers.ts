@@ -1,24 +1,40 @@
+import { inject } from 'vitest'
+import { sql, type Kysely } from 'kysely'
 import type { FastifyInstance } from 'fastify'
 import { buildApp } from '../../src/app.js'
 import { createDb } from '../../src/db/client.js'
+import type { Database } from '../../src/db/schema.js'
 
-/**
- * Task 2 replaces this with the real harness: a Postgres container and a booking engine
- * running beside it. Until then the only route is `/api/health`, which touches neither, and
- * Kysely opens no connection until something queries it.
- */
+let cached: Kysely<Database> | undefined
+
+export function getTestDb(): Kysely<Database> {
+  cached ??= createDb(inject('databaseUrl'))
+  return cached
+}
+
+export async function closeTestDb(): Promise<void> {
+  await cached?.destroy()
+  cached = undefined
+}
+
+export async function resetDb(): Promise<void> {
+  await sql`truncate table booking_details, guests, house_addon_prices, houses, sessions, owners restart identity cascade`.execute(
+    getTestDb(),
+  )
+}
+
 export async function buildTestApp(): Promise<FastifyInstance> {
   const app = await buildApp({
     config: {
-      databaseUrl: 'postgres://postgres:postgres@127.0.0.1:5434/cabins',
-      engineUrl: 'http://127.0.0.1:3000',
-      engineApiKey: `bk_live_${'A'.repeat(51)}`,
+      databaseUrl: inject('databaseUrl'),
+      engineUrl: inject('engineUrl'),
+      engineApiKey: inject('engineApiKey'),
       engineTimeoutMs: 5_000,
       port: 0,
       sessionTtlDays: 30,
       logLevel: 'silent',
     },
-    db: createDb('postgres://postgres:postgres@127.0.0.1:5434/cabins'),
+    db: getTestDb(),
   })
   await app.ready()
   return app

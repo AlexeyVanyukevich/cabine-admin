@@ -6,6 +6,11 @@ export interface Config {
   engineTimeoutMs: number
   port: number
   sessionTtlDays: number
+  /**
+   * Login attempts allowed per minute per IP. Configurable because it is the only way to
+   * exercise the limit in a test without making every other test race it.
+   */
+  loginAttemptsPerMinute: number
   logLevel: string
 }
 
@@ -42,6 +47,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): Config {
     engineTimeoutMs: positiveInt(env, 'ENGINE_TIMEOUT_MS', 5_000),
     port: positiveInt(env, 'PORT', 4000),
     sessionTtlDays: positiveInt(env, 'SESSION_TTL_DAYS', 30),
+    loginAttemptsPerMinute: positiveInt(env, 'LOGIN_ATTEMPTS_PER_MINUTE', 10),
     logLevel: env.LOG_LEVEL?.trim() || 'info',
   }
 }

@@ -18,6 +18,7 @@ describe('loadConfig', () => {
       engineTimeoutMs: 2000,
       port: 4000,
       sessionTtlDays: 7,
+      loginAttemptsPerMinute: 10,
       logLevel: 'info',
     })
   })
@@ -27,6 +28,7 @@ describe('loadConfig', () => {
     expect(config.port).toBe(4000)
     expect(config.sessionTtlDays).toBe(30)
     expect(config.engineTimeoutMs).toBe(5000)
+    expect(config.loginAttemptsPerMinute).toBe(10)
   })
 
   it.each(['DATABASE_URL', 'ENGINE_URL', 'ENGINE_API_KEY'])('requires %s', (key) => {

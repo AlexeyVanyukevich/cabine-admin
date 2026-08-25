@@ -41,6 +41,9 @@ export async function buildTestApp(
     engineTimeoutMs: 5_000,
     port: 0,
     sessionTtlDays: 30,
+    // High enough that a suite signing in on nearly every case does not race the limit.
+    // `auth.test.ts` builds its own app with a low one to prove the limit still bites.
+    loginAttemptsPerMinute: 1_000,
     logLevel: 'silent',
     ...overrides.config,
   }

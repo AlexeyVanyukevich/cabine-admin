@@ -5,6 +5,7 @@ import type { Config } from './config.js'
 import type { Database } from './db/schema.js'
 import type { EngineClient } from './engine/client.js'
 import { registerErrorHandler } from './shared/errors.js'
+import { registerAuth } from './modules/auth/auth.routes.js'
 
 export interface AppDeps {
   config: Config
@@ -37,6 +38,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   registerErrorHandler(app)
 
   app.get('/api/health', { config: { public: true } }, async () => ({ status: 'ok' }))
+
+  await registerAuth(app)
 
   return app
 }

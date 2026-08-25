@@ -1,4 +1,5 @@
 import type { Migration } from 'kysely/migration'
+import * as initial from './001_initial.js'
 
 /**
  * Migrations are listed explicitly instead of being discovered from disk, for the same reason
@@ -8,6 +9,8 @@ import type { Migration } from 'kysely/migration'
  * and makes the order of application visible in review.
  *
  * Keys are the names Kysely records in `kysely_migration`; they are applied in lexicographic
- * order, so keep the numeric prefix. Task 3 adds `001_initial`.
+ * order, so keep the numeric prefix.
  */
-export const migrations: Record<string, Migration> = {}
+export const migrations: Record<string, Migration> = {
+  '001_initial': initial,
+}

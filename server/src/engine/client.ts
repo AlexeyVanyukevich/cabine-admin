@@ -16,7 +16,14 @@ export interface EngineSlot {
   available: boolean
 }
 
+export interface EngineResource {
+  id: string
+  timezone: string
+  isActive: boolean
+}
+
 export interface EngineClient {
+  getResource: (id: string) => Promise<EngineResource | undefined>
   listBookings: (from: string, to: string) => Promise<EngineBooking[]>
   getBooking: (id: string) => Promise<EngineBooking | undefined>
   availability: (resourceId: string, from: string, to: string) => Promise<EngineSlot[]>
@@ -142,6 +149,15 @@ export function createEngineClient(options: EngineClientOptions): EngineClient {
   })
 
   return {
+    async getResource(id) {
+      const raw = await call<{ id: string; timezone: string; is_active: boolean }>(
+        `/resources/${id}`,
+      )
+      return raw === undefined
+        ? undefined
+        : { id: raw.id, timezone: raw.timezone, isActive: raw.is_active }
+    },
+
     async listBookings(from, to) {
       const raw = await call<RawBooking[]>(
         `/bookings?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,

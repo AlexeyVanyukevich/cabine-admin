@@ -37,6 +37,10 @@ export function registerGuard(app: FastifyInstance, service: AuthService): void 
   })
 
   app.addHook('onRequest', async (request) => {
+    // Only the API is guarded. The SPA's own HTML, its bundle and its assets must load without
+    // a session — the page is what shows the login form, so protecting it would mean the
+    // owner is answered 401 by the very screen that exists to fix that.
+    if (!request.url.startsWith('/api/')) return
     if (request.routeOptions.config?.public === true) return
 
     const token = request.cookies.session

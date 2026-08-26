@@ -114,7 +114,6 @@ export function registerErrorHandler(app: FastifyInstance): void {
     void reply.status(500).send({ error: 'internal_error', message: 'Internal server error' })
   })
 
-  app.setNotFoundHandler((_request, reply) => {
-    void reply.status(404).send({ error: 'not_found', message: 'Route not found' })
-  })
+  // The not-found handler is set in app.ts instead: Fastify allows exactly one per instance,
+  // and it has to answer JSON under /api and the SPA's index.html everywhere else.
 }

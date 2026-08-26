@@ -7,3 +7,7 @@ test-results/
 playwright-report/
 *.log
 .DS_Store
+
+# Written by the Playwright global setup so the specs can find the running stack.
+tests/ui/.runtime.json
+server/public/

@@ -1,7 +1,6 @@
 import { fileURLToPath } from 'node:url'
 import type { Kysely } from 'kysely'
 import { Migrator } from 'kysely/migration'
-import { loadConfig } from '../config.js'
 import { createDb } from './client.js'
 import { migrations } from './migrations/index.js'
 import type { Database } from './schema.js'
@@ -24,9 +23,17 @@ export async function runMigrations(db: Kysely<Database>): Promise<void> {
 }
 
 // Executed only when run directly: `npm run migrate`
+//
+// DATABASE_URL alone, deliberately not the whole validated config: migrations have nothing to
+// do with the booking engine, and demanding an API key to create tables would block the first
+// step of a fresh install on a secret that cannot be issued until later.
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const config = loadConfig(process.env)
-  const db = createDb(config.databaseUrl)
+  const databaseUrl = process.env.DATABASE_URL?.trim()
+  if (databaseUrl === undefined || databaseUrl === '') {
+    throw new Error('DATABASE_URL is required to run migrations')
+  }
+
+  const db = createDb(databaseUrl)
   try {
     await runMigrations(db)
     console.log('migrations applied')

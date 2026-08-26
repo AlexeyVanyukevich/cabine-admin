@@ -1,14 +1,21 @@
 import { createInterface } from 'node:readline/promises'
-import { loadConfig } from '../src/config.js'
 import { createDb } from '../src/db/client.js'
 import { hashPassword } from '../src/modules/auth/password.js'
 
 /**
  * The whole of password recovery. There is no reset link and no security question: the owner
  * is one person, and the recovery channel is having a shell on the server.
+ *
+ * DATABASE_URL alone rather than the whole validated config: setting the first password is a
+ * bootstrap step, and requiring an engine key to do it would make the very first login depend
+ * on a secret that has nothing to do with it.
  */
-const config = loadConfig(process.env)
-const db = createDb(config.databaseUrl)
+const databaseUrl = process.env.DATABASE_URL?.trim()
+if (databaseUrl === undefined || databaseUrl === '') {
+  throw new Error('DATABASE_URL is required to set the owner password')
+}
+
+const db = createDb(databaseUrl)
 
 try {
   const owners = await db.selectFrom('owners').select(['id', 'label']).limit(2).execute()

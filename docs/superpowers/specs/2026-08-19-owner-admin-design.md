@@ -33,14 +33,14 @@ about them — they are not bookable units, they are a line on a bill, and the b
 
 ### Out of scope
 
-| Left out | Why |
-| --- | --- |
-| Guest self-service and online payment | The owner enters bookings; money moves outside the system and is only recorded |
-| Telegram reminders and Telegram login | Slice 2. See section 10 |
-| Seasonal rates | One price per house until the owner asks for more |
-| More than one owner | There is one. A second changes login, not the model |
-| Channel sync (Avito, Booking) | Nothing to sync with yet |
-| Minimum stay, booking horizon | The engine deliberately left these to its caller, and no rule exists yet to enforce |
+| Left out                              | Why                                                                                 |
+| ------------------------------------- | ----------------------------------------------------------------------------------- |
+| Guest self-service and online payment | The owner enters bookings; money moves outside the system and is only recorded      |
+| Telegram reminders and Telegram login | Slice 2. See section 10                                                             |
+| Seasonal rates                        | One price per house until the owner asks for more                                   |
+| More than one owner                   | There is one. A second changes login, not the model                                 |
+| Channel sync (Avito, Booking)         | Nothing to sync with yet                                                            |
+| Minimum stay, booking horizon         | The engine deliberately left these to its caller, and no rule exists yet to enforce |
 
 ---
 
@@ -106,15 +106,15 @@ the only place three things live.
 **Error translation.** The engine's `{ error, message, details }` codes mean different things
 to us:
 
-| Engine | What this project does |
-| --- | --- |
-| `409 slot_unavailable` | The nights were taken between rendering and saving — tell the owner, refetch the calendar |
-| `400 outside_schedule` | The house is closed then; an input error, not a fault |
-| `400 invalid_slot_boundary` | Our date arithmetic is wrong — log as a defect, not a user error |
-| `409 idempotency_key_reused` | Same key, different booking: a defect on our side |
-| `503 concurrent_update` | Retry with backoff; the engine refuses to retry on purpose, leaving the choice to its caller |
-| `429 rate_limited` | Back off and retry |
-| `401 unauthorized` | The key was revoked or the tenant disabled — an operational alert, not an input error |
+| Engine                       | What this project does                                                                       |
+| ---------------------------- | -------------------------------------------------------------------------------------------- |
+| `409 slot_unavailable`       | The nights were taken between rendering and saving — tell the owner, refetch the calendar    |
+| `400 outside_schedule`       | The house is closed then; an input error, not a fault                                        |
+| `400 invalid_slot_boundary`  | Our date arithmetic is wrong — log as a defect, not a user error                             |
+| `409 idempotency_key_reused` | Same key, different booking: a defect on our side                                            |
+| `503 concurrent_update`      | Retry with backoff; the engine refuses to retry on purpose, leaving the choice to its caller |
+| `429 rate_limited`           | Back off and retry                                                                           |
+| `401 unauthorized`           | The key was revoked or the tenant disabled — an operational alert, not an input error        |
 
 **Idempotency.** The engine accepts an `idempotency_key` and answers a replay with `200`
 instead of `201`. The facade mints one per create attempt and reuses it across retries, so a
@@ -189,7 +189,7 @@ one genuinely expensive failure in this domain.
 The tempting alternative is `hold: true`, write locally, then `confirm`, so a failed local
 write lets the hold lapse and frees the night.
 
-Rejected. A freed night is the *worse* outcome: the owner saw an error, assumed they would
+Rejected. A freed night is the _worse_ outcome: the owner saw an error, assumed they would
 redo it, and ten minutes later the night quietly became available for someone else. An orphan
 booking preserves the owner's intent and asks loudly to be repaired.
 
@@ -209,19 +209,19 @@ Joining on `engine_booking_id` produces two mismatches, and both are shown rathe
 
 ### The guest
 
-The phone is normalised and unique; it *is* the guest's identity. History is
+The phone is normalised and unique; it _is_ the guest's identity. History is
 `booking_details` by `guest_id`, joined with dates from the engine. There is no history table.
 
 ### Add-ons exist twice, on purpose
 
 An add-on appears in two shapes, and they overlap almost entirely:
 
-| | Where | Fields |
-| --- | --- | --- |
-| The price list | `house_addon_prices` | `id · house_id · code · label · default_price` |
-| The snapshot | `booking_details.addons_snapshot` | `code · label · price` |
+|                | Where                             | Fields                                         |
+| -------------- | --------------------------------- | ---------------------------------------------- |
+| The price list | `house_addon_prices`              | `id · house_id · code · label · default_price` |
+| The snapshot   | `booking_details.addons_snapshot` | `code · label · price`                         |
 
-The overlap is the point, not redundancy: a snapshot *is* a copy of the price list at the
+The overlap is the point, not redundancy: a snapshot _is_ a copy of the price list at the
 moment of sale. It is the same pattern as `houses.price_per_night` beside
 `booking_details.price_per_night` — one is current, one is frozen — and merging either pair
 would mean that raising a rate in March rewrites a January total.
@@ -378,14 +378,14 @@ browser because stopping the shared database would have broken every following c
 
 ## 9. Configuration
 
-| Variable | Meaning |
-| --- | --- |
-| `DATABASE_URL` | This project's own database, not the engine's |
-| `ENGINE_URL` | Where the engine answers |
-| `ENGINE_API_KEY` | A **Site backend** preset key: `availability.read`, `resources.read`, `bookings.read`, `bookings.write`, `bookings.list` |
-| `ENGINE_TIMEOUT_MS` | How long a call to the engine may hang. Default 5000 |
-| `PORT` | |
-| `SESSION_TTL_DAYS` | Default 30 |
+| Variable            | Meaning                                                                                                                  |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `DATABASE_URL`      | This project's own database, not the engine's                                                                            |
+| `ENGINE_URL`        | Where the engine answers                                                                                                 |
+| `ENGINE_API_KEY`    | A **Site backend** preset key: `availability.read`, `resources.read`, `bookings.read`, `bookings.write`, `bookings.list` |
+| `ENGINE_TIMEOUT_MS` | How long a call to the engine may hang. Default 5000                                                                     |
+| `PORT`              |                                                                                                                          |
+| `SESSION_TTL_DAYS`  | Default 30                                                                                                               |
 
 The key is issued in the engine's console and pasted here once. It never reaches the browser.
 

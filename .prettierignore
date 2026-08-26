@@ -6,3 +6,7 @@ server/src/engine/schema.d.ts
 node_modules
 dist
 package-lock.json
+server/public
+test-results
+playwright-report
+.run

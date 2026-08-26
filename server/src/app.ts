@@ -8,6 +8,7 @@ import { registerErrorHandler } from './shared/errors.js'
 import { registerAuth } from './modules/auth/auth.routes.js'
 import { registerHouses } from './modules/houses/house.routes.js'
 import { registerGuests } from './modules/guests/guest.routes.js'
+import { registerBookings } from './modules/bookings/booking.routes.js'
 
 export interface AppDeps {
   config: Config
@@ -44,6 +45,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await registerAuth(app)
   registerHouses(app)
   registerGuests(app)
+  registerBookings(app)
 
   return app
 }

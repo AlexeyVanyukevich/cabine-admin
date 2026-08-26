@@ -277,8 +277,14 @@ Because it faces the internet: a rate limit on the login route by IP, and an `Or
 every state-changing request — the same ten lines as the engine's console. `SameSite=Lax`
 covers most of it; the `Origin` check covers the rest.
 
-HTTPS is not optional — a `Secure` cookie does not work without it. Caddy in front, which
-obtains and renews the certificate on its own.
+HTTPS is not optional — a `Secure` cookie does not work without it, and the failure is silent:
+the owner signs in successfully and is signed out on the next request, which reads as a broken
+login rather than a missing certificate.
+
+Which terminator provides it is left open on purpose. Naming one in the repository ships a
+configuration file for a tool the owner may never have run, and an unexplained config file is
+a liability at exactly the moment something breaks. The requirement belongs in the README; the
+choice belongs to whoever deploys.
 
 There is no password reset. The owner is one person and the recovery channel is that CLI
 command on the server. Slice 2 moves login to Telegram and this disappears.

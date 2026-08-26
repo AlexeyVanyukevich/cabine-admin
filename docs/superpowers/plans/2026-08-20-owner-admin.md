@@ -3391,7 +3391,7 @@ git commit -m "feat: the night timeline, drag selection and the booking form"
 
 **Files:**
 
-- Create: `run`, `README.md`, `Dockerfile`, `Caddyfile`
+- Create: `run`, `README.md`, `Dockerfile`
 - Modify: `package.json`
 
 - [ ] **Step 1: Write the run script**
@@ -3406,9 +3406,11 @@ No `psql` scenario. Nothing in the product uses it — the server talks to Postg
 
 Quick start, the engine as a prerequisite, how to issue the `Site backend` key in the engine's console, the environment table, and one short section repeating why the key never reaches the browser.
 
-- [ ] **Step 3: Write the Dockerfile and the Caddyfile**
+- [ ] **Step 3: Write the Dockerfile**
 
-Multi-stage: build both workspaces, ship `server/dist` and `server/public`. Caddy terminates TLS and proxies to the server; the comment records that HTTPS is not decoration — the session cookie is `Secure` and simply will not be set without it.
+Multi-stage: build both workspaces, ship `server/dist` and `server/public`, one container serving the API and the app from one origin.
+
+No TLS terminator is shipped. HTTPS is still required — the session cookie is `Secure` and will not be stored without it, so login appears to work and then silently does not — but that requirement is recorded in the README rather than as a config file for a tool the owner may never have run.
 
 - [ ] **Step 4: Full verification**
 
@@ -3418,7 +3420,7 @@ Expected: types clean, formatting clean, every suite green.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add run README.md Dockerfile Caddyfile package.json
+git add run README.md Dockerfile package.json
 git commit -m "docs: run scenarios, deployment and the key handling rules"
 ```
 

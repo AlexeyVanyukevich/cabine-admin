@@ -99,8 +99,17 @@ its bookings for the whole run, so a test that needs free nights books its own w
 
 ## Deployment
 
-`Dockerfile` builds both workspaces and ships `server/dist` beside the built SPA, served from
-one origin. `Caddyfile` terminates TLS in front of it.
+`Dockerfile` builds both workspaces and ships `server/dist` beside the built SPA, so a single
+container serves the API and the app from one origin. It needs `DATABASE_URL`, `ENGINE_URL`
+and `ENGINE_API_KEY` in its environment, and a Postgres to talk to.
 
-HTTPS is not decoration here: the session cookie is `Secure`, and a browser will not store it
-over plain HTTP, so the owner simply could not stay signed in.
+**It must be reached over HTTPS.** This is not a preference. The session cookie is set
+`Secure`, and browsers refuse to store a `Secure` cookie that arrives over plain HTTP — the
+owner would sign in, appear to succeed, and be signed out again on the very next tap, with
+nothing on screen to explain it. The symptom looks like a broken login, not like a missing
+certificate, which is why it is written down here.
+
+Anything that terminates TLS and forwards to the container will do, and hosts that provide
+HTTPS themselves need no extra piece at all. Whatever you use, forward to the container's
+port and let it serve both `/api` and the app; splitting them across origins would break the
+cookie for a second reason.

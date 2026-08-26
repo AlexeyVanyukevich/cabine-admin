@@ -29,6 +29,11 @@ export interface BookingView {
   orphan: boolean
 }
 
+export interface CalendarView {
+  houses: Array<{ id: string; name: string; nights: Array<{ date: string; available: boolean }> }>
+  bookings: BookingView[]
+}
+
 export interface CreateBookingInput {
   house_id: string
   check_in: string
@@ -115,6 +120,101 @@ export class BookingService {
       deposit,
       note: body.note ?? null,
     })
+  }
+
+  /**
+   * Matches the bound the engine puts on its own listings. Refusing here with a clear message
+   * beats forwarding a request the engine will reject anyway.
+   */
+  private assertWindow(from: string, to: string): void {
+    let nights: number
+    try {
+      nights = nightsBetween(from, to)
+    } catch (error) {
+      throw new ValidationError(error instanceof Error ? error.message : 'Unusable window')
+    }
+    if (nights > 366) throw new ValidationError('A calendar window may not exceed 366 nights')
+  }
+
+  /**
+   * Assembled from two systems and storing nothing of its own. Occupancy comes from the
+   * engine's availability, which already accounts for closed dates and cancellations; the
+   * bookings come from its listing; the guest and the money come from here.
+   */
+  async calendar(from: string, to: string): Promise<CalendarView> {
+    this.assertWindow(from, to)
+    const houses = await this.houses.list()
+
+    const [bookings, ...availability] = await Promise.all([
+      this.engine.listBookings(from, to),
+      ...houses.map((house) => this.engine.availability(house.engine_resource_id, from, to)),
+    ])
+
+    const details = await this.repository.byEngineIds(bookings.map((booking) => booking.id))
+    const byEngineId = new Map(details.map((row) => [row.engine_booking_id, row]))
+    const guests = await Promise.all(
+      details.map((row) => this.guests.byId(row.guest_id).catch(() => undefined)),
+    )
+    const guestById = new Map(
+      guests.filter((guest) => guest !== undefined).map((guest) => [guest.id, guest]),
+    )
+
+    return {
+      houses: houses.map((house, index) => ({
+        id: house.id,
+        name: house.name,
+        nights: availability[index] ?? [],
+      })),
+      bookings: bookings.map((booking) => {
+        const row = byEngineId.get(booking.id)
+        const house = houses.find((h) => h.engine_resource_id === booking.resourceId)
+        return this.viewFromRow(
+          booking,
+          house,
+          row === undefined ? undefined : guestById.get(row.guest_id),
+          row,
+        )
+      }),
+    }
+  }
+
+  async reschedule(
+    engineBookingId: string,
+    checkIn: string,
+    checkOut: string,
+  ): Promise<BookingView> {
+    const existing = await this.engine.getBooking(engineBookingId)
+    if (existing === undefined) throw new NotFoundError(`No booking ${engineBookingId}`)
+
+    try {
+      nightsBetween(checkIn, checkOut)
+    } catch (error) {
+      throw new ValidationError(error instanceof Error ? error.message : 'Unusable stay')
+    }
+
+    // Nothing local to update: no dates are stored here, so a move cannot leave the two
+    // systems disagreeing about when the stay is.
+    await this.engine.reschedule(engineBookingId, checkIn, checkOut)
+    return this.byId(engineBookingId)
+  }
+
+  async cancel(engineBookingId: string): Promise<BookingView> {
+    const existing = await this.engine.getBooking(engineBookingId)
+    if (existing === undefined) throw new NotFoundError(`No booking ${engineBookingId}`)
+
+    // The details stay as history. No status is stored here, so there is nothing to mark.
+    await this.engine.cancel(engineBookingId)
+    return this.byId(engineBookingId)
+  }
+
+  async amend(
+    engineBookingId: string,
+    patch: { deposit?: number; note?: string | null },
+  ): Promise<BookingView> {
+    // Money and notes are ours alone; the engine is not involved and must not be called.
+    const updated = await this.repository.update(engineBookingId, patch)
+    if (updated === undefined) throw new NotFoundError(`No booking ${engineBookingId}`)
+    return this.byId(engineBookingId)
   }
 
   async byId(engineBookingId: string): Promise<BookingView> {

@@ -48,3 +48,35 @@ export async function seedHouse(
   }
   return response.json().id as string
 }
+
+/** A confirmed booking with one add-on. Returns the engine's booking id. */
+export async function seedBooking(
+  app: FastifyInstance,
+  cookies: Record<string, string>,
+  input: {
+    houseId: string
+    checkIn: string
+    checkOut: string
+    overrides?: Record<string, unknown>
+  },
+): Promise<string> {
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/bookings',
+    cookies,
+    payload: {
+      house_id: input.houseId,
+      check_in: input.checkIn,
+      check_out: input.checkOut,
+      guest: { name: 'Иван', phone: '+79123456789' },
+      price_per_night: 30000,
+      addons: [{ code: 'sauna' }],
+      deposit: 20000,
+      ...input.overrides,
+    },
+  })
+  if (response.statusCode !== 201) {
+    throw new Error(`Could not seed a booking: ${response.statusCode} ${response.body}`)
+  }
+  return response.json().id as string
+}

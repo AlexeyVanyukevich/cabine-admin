@@ -74,6 +74,12 @@
   margin: 0 auto;
 }
 
+.hint {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
 .notice {
   background: var(--surface);
   border: 1px solid var(--line);

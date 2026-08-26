@@ -101,6 +101,12 @@
   background: var(--water-soft);
 }
 
+/* Nights the owner has picked but not yet saved: clearly chosen, clearly not yet a booking. */
+.timeline__cell--picked {
+  background: var(--water-soft);
+  box-shadow: inset 0 0 0 2px var(--water);
+}
+
 /* Not free, but nothing in this window explains why. Never drawn as free. */
 .timeline__cell--blocked {
   cursor: default;

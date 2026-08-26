@@ -1,0 +1,47 @@
+.stay {
+  margin: 0 0 16px;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.stay--muted {
+  color: var(--ink-faint);
+}
+
+.addons {
+  border: none;
+  padding: 0;
+  margin: 0 0 14px;
+}
+
+.facts {
+  margin: 0 0 4px;
+}
+
+.facts__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 15px;
+}
+
+.facts__row dt {
+  color: var(--ink-faint);
+}
+
+.facts__row dd {
+  margin: 0;
+  font-weight: 500;
+}
+
+.facts__row a {
+  color: var(--water);
+}
+
+.actions--end {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}

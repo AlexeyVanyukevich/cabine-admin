@@ -1,4 +1,6 @@
+import { useEffect, useRef } from 'react'
 import type { Booking, CalendarHouse } from '../api'
+import type { SelectionState } from './useSelection'
 import { eachNight, isWeekend, money, today, weekday } from './nights'
 import './timeline.css'
 
@@ -7,8 +9,10 @@ interface Props {
   to: string
   houses: CalendarHouse[]
   bookings: Booking[]
+  selection: SelectionState
   onOpenBooking: (booking: Booking) => void
-  onPickNight: (houseId: string, date: string) => void
+  onNightDown: (houseId: string, date: string, free: string[]) => void
+  onNightOver: (houseId: string, date: string, free: string[]) => void
 }
 
 /** Where a night sits inside its stay, which is what gives a block its shape. */
@@ -30,9 +34,25 @@ function segmentOf(booking: Booking, date: string): Segment {
  * morning the last one leaves. Here the two blocks simply sit against each other, and the
  * owner can see the join. It also happens to be the shape a thumb scrolls.
  */
-export function Timeline({ from, to, houses, bookings, onOpenBooking, onPickNight }: Props) {
+export function Timeline({
+  from,
+  to,
+  houses,
+  bookings,
+  selection,
+  onOpenBooking,
+  onNightDown,
+  onNightOver,
+}: Props) {
   const nights = eachNight(from, to)
   const now = today()
+  const todayRow = useRef<HTMLDivElement>(null)
+
+  // Opening the calendar should land on now, not on the 1st. Only when the month in view is
+  // the one containing today, so paging to another month keeps its own top.
+  useEffect(() => {
+    todayRow.current?.scrollIntoView({ block: 'center', behavior: 'auto' })
+  }, [from])
 
   const live = bookings.filter((booking) => booking.status !== 'cancelled')
 
@@ -44,8 +64,21 @@ export function Timeline({ from, to, houses, bookings, onOpenBooking, onPickNigh
     )
   }
 
+  const freeIn = (house: CalendarHouse): string[] =>
+    house.nights.filter((night) => night.available).map((night) => night.date)
+
+  function selected(houseId: string, date: string): boolean {
+    if (selection.kind !== 'selecting' || selection.houseId !== houseId) return false
+    return eachNight(selection.checkIn, selection.checkOut).includes(date)
+  }
+
   return (
-    <div className="timeline" style={{ '--lanes': houses.length } as React.CSSProperties}>
+    <div
+      className="timeline"
+      style={{ '--lanes': houses.length } as React.CSSProperties}
+      // A drag that ends outside a cell still ends the gesture.
+      onPointerLeave={() => undefined}
+    >
       <div className="timeline__head">
         <div className="timeline__corner" />
         {houses.map((house) => (
@@ -61,6 +94,7 @@ export function Timeline({ from, to, houses, bookings, onOpenBooking, onPickNigh
           return (
             <div
               key={date}
+              ref={isToday ? todayRow : undefined}
               className={[
                 'timeline__row',
                 isWeekend(date) ? 'timeline__row--weekend' : '',
@@ -80,24 +114,40 @@ export function Timeline({ from, to, houses, bookings, onOpenBooking, onPickNigh
                   house.nights.find((night) => night.date === date)?.available ?? true
 
                 if (booking === undefined) {
-                  // A night the engine calls taken with no booking behind it in this window —
-                  // shown as blocked rather than free, because free is the dangerous guess.
                   if (!nightAvailable) {
+                    // Not free, and nothing in this window explains why. Never drawn as free.
                     return (
-                      <div key={house.id} className="timeline__cell timeline__cell--blocked">
+                      <div
+                        key={house.id}
+                        className="timeline__cell timeline__cell--blocked"
+                        data-testid="night-cell"
+                        data-available="false"
+                      >
                         <span className="visually-hidden">Занято</span>
                       </div>
                     )
                   }
+
                   return (
                     <button
                       key={house.id}
                       type="button"
-                      className="timeline__cell timeline__cell--free"
-                      onClick={() => onPickNight(house.id, date)}
+                      className={[
+                        'timeline__cell',
+                        'timeline__cell--free',
+                        selected(house.id, date) ? 'timeline__cell--picked' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      data-testid="night-cell"
+                      data-available="true"
+                      data-house={house.name}
+                      data-date={date}
+                      onPointerDown={() => onNightDown(house.id, date, freeIn(house))}
+                      onPointerEnter={() => onNightOver(house.id, date, freeIn(house))}
                     >
                       <span className="visually-hidden">
-                        Свободно, {date}, {house.name}. Добавить бронь
+                        Свободно, {date}, {house.name}
                       </span>
                     </button>
                   )
@@ -118,12 +168,16 @@ export function Timeline({ from, to, houses, bookings, onOpenBooking, onPickNigh
                     ]
                       .filter(Boolean)
                       .join(' ')}
+                    data-testid="night-cell"
+                    data-available="false"
+                    data-house={house.name}
+                    data-date={date}
                     onClick={() => onOpenBooking(booking)}
                   >
                     {(segment === 'start' || segment === 'only') && (
-                      <span className="timeline__label">
+                      <span className="timeline__label" data-testid="booking-bar">
                         <span className="timeline__guest">
-                          {booking.orphan ? 'Без имени' : (booking.guest?.name ?? '—')}
+                          {booking.orphan ? 'Бронь без данных' : (booking.guest?.name ?? '—')}
                         </span>
                         {owes && <span className="timeline__owed">{money(booking.balance)}</span>}
                       </span>

@@ -8,6 +8,7 @@
     "dev": "tsx watch src/server.ts",
     "migrate": "tsx src/db/migrate.ts",
     "owner:password": "tsx scripts/set-password.ts",
+    "house:add": "tsx scripts/add-house.ts",
     "test": "vitest run",
     "engine:types": "openapi-typescript $ENGINE_URL/docs/json -o src/engine/schema.d.ts"
   },

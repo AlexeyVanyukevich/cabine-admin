@@ -217,6 +217,30 @@ export class BookingService {
     return this.byId(engineBookingId)
   }
 
+  /**
+   * Everywhere this guest has stayed, newest first. The dates and the status come from the
+   * engine one booking at a time — a guest has a handful of stays, not a page of them.
+   */
+  async forGuest(guestId: string): Promise<BookingView[]> {
+    const guest = await this.guests.byId(guestId)
+    const rows = await this.repository.byGuestId(guestId)
+    const houses = await this.houses.list()
+
+    const views = await Promise.all(
+      rows.map(async (row) => {
+        const engineBooking = await this.engine.getBooking(row.engine_booking_id)
+        if (engineBooking === undefined) return undefined
+
+        const house = houses.find((h) => h.engine_resource_id === engineBooking.resourceId)
+        return this.viewFromRow(engineBooking, house, guest, row)
+      }),
+    )
+
+    return views
+      .filter((view) => view !== undefined)
+      .sort((a, b) => b.check_in.localeCompare(a.check_in))
+  }
+
   async byId(engineBookingId: string): Promise<BookingView> {
     const engineBooking = await this.engine.getBooking(engineBookingId)
     if (engineBooking === undefined) throw new NotFoundError(`No booking ${engineBookingId}`)

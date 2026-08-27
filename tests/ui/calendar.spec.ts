@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { appUrl, resetAppDb, seedHouse, setOwnerPassword } from './helpers.js'
+import { appUrl, monthStart, resetAppDb, seedHouse, setOwnerPassword } from './helpers.js'
 
 const PASSWORD = 'correct horse battery staple'
 const HOUSE = 'Дом у озера'
@@ -9,18 +9,17 @@ const iso = (ms: number) => new Date(ms).toISOString().slice(0, 10)
 const addDays = (date: string, days: number) => iso(Date.parse(`${date}T00:00:00Z`) + days * DAY_MS)
 
 /** The month after this one: one click away, and empty of anything the other specs booked. */
-const now = new Date()
-const MONTH = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 2).padStart(2, '0')}-01`
+const MONTH = monthStart(1)
 
 /**
  * `resetAppDb` clears this project's tables, but the engine keeps its bookings for the whole
- * run, so each case takes days of its own inside that month. Arithmetic, not string surgery:
- * building a date by adding to the day number produced `2030-01-39` and rendered nothing.
+ * run, so each case names days of its own inside that month.
+ *
+ * The offset is explicit rather than drawn from a counter: Playwright re-evaluates the
+ * module, so module-level mutable state silently restarts and two cases book the same night.
  */
-let cursor = 0
-function stay(nights = 2) {
-  cursor += 4
-  const checkIn = addDays(MONTH, cursor)
+function stay(dayOffset: number, nights = 2) {
+  const checkIn = addDays(MONTH, dayOffset)
   return { checkIn, checkOut: addDays(checkIn, nights), month: MONTH.slice(0, 7) }
 }
 
@@ -59,7 +58,7 @@ async function pickNights(page: Page, checkIn: string, lastNight: string): Promi
 }
 
 test('picks free nights and books them', async ({ page }) => {
-  const { checkIn, month } = stay()
+  const { checkIn, month } = stay(3)
   await signIn(page)
   await goToMonth(page, month)
 
@@ -81,7 +80,7 @@ test('picks free nights and books them', async ({ page }) => {
 
 // The property the whole rendering rests on, verified in a browser.
 test('two stays meet on a departure date without overlapping', async ({ page }) => {
-  const { checkIn, checkOut, month } = stay()
+  const { checkIn, checkOut, month } = stay(8)
   await signIn(page)
   await goToMonth(page, month)
 
@@ -99,7 +98,7 @@ test('two stays meet on a departure date without overlapping', async ({ page }) 
 })
 
 test('an occupied night cannot start a booking', async ({ page }) => {
-  const { checkIn, month } = stay()
+  const { checkIn, month } = stay(13)
   await signIn(page)
   await goToMonth(page, month)
 
@@ -118,7 +117,7 @@ test('an occupied night cannot start a booking', async ({ page }) => {
 })
 
 test('records a payment against a booking', async ({ page }) => {
-  const { checkIn, month } = stay(1)
+  const { checkIn, month } = stay(18, 1)
   await signIn(page)
   await goToMonth(page, month)
 
@@ -140,7 +139,7 @@ test('records a payment against a booking', async ({ page }) => {
 })
 
 test('cancelling a booking frees its nights', async ({ page }) => {
-  const { checkIn, month } = stay(1)
+  const { checkIn, month } = stay(23, 1)
   await signIn(page)
   await goToMonth(page, month)
 

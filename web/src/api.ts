@@ -113,5 +113,9 @@ export interface House {
   engine_resource_id: string
   name: string
   price_per_night: number
+  /** `HH:MM`, ours. */
+  checkout_time: string
+  /** `HH:MM`, the engine's slot boundary. Null only when the engine could not be reached. */
+  checkin_time: string | null
   addons: Array<{ id: string; code: string; label: string; default_price: number }>
 }

@@ -1,0 +1,23 @@
+.topbar__title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.signout {
+  display: block;
+  width: 100%;
+  margin: 24px 0 8px;
+  height: var(--tap);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.signout:hover {
+  border-color: var(--alert);
+  color: var(--alert);
+}

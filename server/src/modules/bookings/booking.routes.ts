@@ -19,12 +19,19 @@ import {
  * so an unreachable engine cannot become a 500 in whichever route forgot to wrap itself —
  * and for the calendar that difference is "we cannot tell you" versus "everything is free".
  */
-export function registerBookings(instance: FastifyInstance): void {
-  const app = instance.withTypeProvider<TypeBoxTypeProvider>()
-
+/**
+ * Built the same way wherever it is needed, so the guests routes and the bookings routes
+ * cannot end up with services wired differently.
+ */
+export function createBookingService(app: FastifyInstance): BookingService {
   const houses = new HouseService(new HouseRepository(app.db), app.engine)
   const guests = new GuestService(new GuestRepository(app.db))
-  const service = new BookingService(new BookingRepository(app.db), houses, guests, app.engine)
+  return new BookingService(new BookingRepository(app.db), houses, guests, app.engine)
+}
+
+export function registerBookings(instance: FastifyInstance): void {
+  const app = instance.withTypeProvider<TypeBoxTypeProvider>()
+  const service = createBookingService(app)
 
   app.post('/api/bookings', { schema: { body: CreateBookingBody } }, async (request, reply) =>
     reply.status(201).send(await service.create(request.body)),

@@ -45,6 +45,14 @@ export class BookingRepository {
     return this.db.selectFrom('booking_details').selectAll().execute()
   }
 
+  byGuestId(guestId: string): Promise<BookingDetails[]> {
+    return this.db
+      .selectFrom('booking_details')
+      .selectAll()
+      .where('guest_id', '=', guestId)
+      .execute()
+  }
+
   update(
     engineBookingId: string,
     patch: { deposit?: number; note?: string | null },

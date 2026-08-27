@@ -2,14 +2,41 @@ import type { EngineClient } from '../../engine/client.js'
 import { ConflictError, NotFoundError, ValidationError } from '../../shared/errors.js'
 import type { AddonInput, House, HouseInput, HouseRepository } from './house.repository.js'
 
+/** A house as the API answers it: its own columns, plus check-in read from the engine. */
+export interface HouseWithCheckIn extends House {
+  checkin_time: string | null
+}
+
 export class HouseService {
   constructor(
     private readonly repository: HouseRepository,
     private readonly engine: EngineClient,
   ) {}
 
-  list(): Promise<House[]> {
-    return this.repository.list()
+  /**
+   * Check-in is the engine's `slot_anchor_time`, read rather than copied — a local copy would
+   * be a second answer to a question the engine owns.
+   *
+   * Best-effort on purpose: if the engine cannot be reached the houses still list, with
+   * check-in unknown. Renaming a house or fixing a price should not require the engine to be
+   * up, and unlike the calendar there is nothing here that a missing value makes dangerous.
+   */
+  async list(): Promise<HouseWithCheckIn[]> {
+    const houses = await this.repository.list()
+
+    const checkInById = new Map<string, string>()
+    try {
+      for (const resource of await this.engine.listResources()) {
+        checkInById.set(resource.id, resource.checkInTime)
+      }
+    } catch {
+      // Left empty; each house answers with a null check-in below.
+    }
+
+    return houses.map((house) => ({
+      ...house,
+      checkin_time: checkInById.get(house.engine_resource_id) ?? null,
+    }))
   }
 
   async byId(id: string): Promise<House> {

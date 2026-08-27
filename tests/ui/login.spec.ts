@@ -43,6 +43,8 @@ test('signing out ends the session everywhere, not just in this tab', async ({ p
   await page.getByRole('button', { name: 'Войти' }).click()
   await expect(page.getByRole('heading', { name: /Календарь/ })).toBeVisible()
 
+  // Signing out lives on the Дома screen, beside the other things done rarely.
+  await page.getByRole('link', { name: 'Дома' }).click()
   await page.getByRole('button', { name: 'Выйти' }).click()
   await expect(page).toHaveURL(/\/login$/)
 

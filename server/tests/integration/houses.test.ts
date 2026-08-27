@@ -158,6 +158,31 @@ describe('GET /api/houses', () => {
   it('needs a session', async () => {
     expect((await app.inject({ method: 'GET', url: '/api/houses' })).statusCode).toBe(401)
   })
+
+  // Check-in is the engine's slot boundary. It is read on every listing rather than copied,
+  // so the screen cannot show a value the engine has since stopped agreeing with.
+  it('reports the check-in time the engine holds', async () => {
+    await app.inject({ method: 'POST', url: '/api/houses', cookies, payload: house() })
+
+    const response = await app.inject({ method: 'GET', url: '/api/houses', cookies })
+    expect(response.json()[0].checkin_time).toMatch(/^\d{2}:\d{2}$/)
+  })
+
+  // Unlike the calendar, a house with an unknown check-in is not dangerous — and being able
+  // to fix a price while the engine is down is worth more than refusing to answer.
+  it('still lists houses when the engine cannot be reached', async () => {
+    await app.inject({ method: 'POST', url: '/api/houses', cookies, payload: house() })
+
+    // The session is a row in the shared database, so the same cookie works on both apps.
+    const offline = await buildTestApp({ config: { engineUrl: 'http://127.0.0.1:1' } })
+    try {
+      const down = await offline.inject({ method: 'GET', url: '/api/houses', cookies })
+      expect(down.statusCode).toBe(200)
+      expect(down.json()[0].checkin_time).toBeNull()
+    } finally {
+      await offline.close()
+    }
+  })
 })
 
 describe('PATCH /api/houses/:id', () => {

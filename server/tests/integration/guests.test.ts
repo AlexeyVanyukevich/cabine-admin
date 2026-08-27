@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import type { FastifyInstance } from 'fastify'
 import { buildTestApp, closeTestDb, resetDb } from './helpers.js'
-import { signIn } from './auth-helper.js'
+import { seedBooking, seedHouse, signIn } from './auth-helper.js'
+import { addDays } from '../../src/shared/nights.js'
 
 let app: FastifyInstance
 let cookies: Record<string, string>
@@ -128,6 +129,58 @@ describe('PATCH /api/guests/:id', () => {
       url: '/api/guests/00000000-0000-4000-8000-000000000000',
       cookies,
       payload: { name: 'Кто-то' },
+    })
+    expect(response.statusCode).toBe(404)
+  })
+})
+
+describe('GET /api/guests/:id/bookings', () => {
+  it('lists a guest’s stays, newest first, with dates from the engine', async () => {
+    const houseId = await seedHouse(app, cookies)
+    const first = addDays('2031-03-01', 0)
+    const second = addDays('2031-03-01', 20)
+
+    await seedBooking(app, cookies, { houseId, checkIn: first, checkOut: addDays(first, 2) })
+    await seedBooking(app, cookies, { houseId, checkIn: second, checkOut: addDays(second, 1) })
+
+    const guest = await app.inject({
+      method: 'GET',
+      url: `/api/guests?phone=${encodeURIComponent('+79123456789')}`,
+      cookies,
+    })
+    const guestId = guest.json()[0].id as string
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/guests/${guestId}/bookings`,
+      cookies,
+    })
+
+    expect(response.statusCode).toBe(200)
+    const stays = response.json()
+    expect(stays).toHaveLength(2)
+    // Newest first: the later stay leads.
+    expect(stays[0].check_in).toBe(second)
+    expect(stays[1].check_in).toBe(first)
+    expect(stays[0]).toMatchObject({ house_name: 'Дом у озера', total: 35000 })
+  })
+
+  it('answers an empty list for a guest who has never stayed', async () => {
+    const created = await create({ name: 'Никто', phone: '+48999888777' })
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/guests/${created.json().id}/bookings`,
+      cookies,
+    })
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual([])
+  })
+
+  it('answers 404 for a guest that is not there', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/guests/00000000-0000-4000-8000-000000000000/bookings',
+      cookies,
     })
     expect(response.statusCode).toBe(404)
   })

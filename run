@@ -207,6 +207,13 @@ scenario_house_add() {
   ( cd server && DATABASE_URL="${DATABASE_URL:-$COMPOSE_DB_URL}" npx tsx scripts/add-house.ts )
 }
 
+scenario_house_checkin() {
+  need_node; need_deps; need_env
+  start_db
+  need_engine
+  ( cd server && DATABASE_URL="${DATABASE_URL:-$COMPOSE_DB_URL}" npx tsx scripts/set-checkin.ts )
+}
+
 scenario_check() {
   need_node; need_deps
   step "Types"
@@ -239,6 +246,7 @@ ${BOLD}./run <scenario>${OFF}
   ${BOLD}migrate${OFF}        apply migrations to the local database
   ${BOLD}owner:password${OFF} set the owner's password (also signs every device out)
   ${BOLD}house:add${OFF}      create a house: its engine resource, then its row here
+  ${BOLD}house:checkin${OFF}  move a house's check-in time, if it has no future bookings
 
 The booking engine must be running for ${BOLD}dev${OFF}: (cd ../booking-engine && ./run dev --bg)
 TEXT
@@ -257,6 +265,7 @@ case "$SCENARIO" in
   migrate)        scenario_migrate ;;
   owner:password) scenario_password ;;
   house:add)      scenario_house_add "$@" ;;
+  house:checkin)  scenario_house_checkin ;;
   ''|-h|--help)   usage ;;
   *)              die "Unknown scenario: ${SCENARIO}" "Run ./run with no arguments to see the list." ;;
 esac

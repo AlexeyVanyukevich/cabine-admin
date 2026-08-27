@@ -1,5 +1,6 @@
 import type { Migration } from 'kysely/migration'
 import * as initial from './001_initial.js'
+import * as houseCheckoutTime from './002_house_checkout_time.js'
 
 /**
  * Migrations are listed explicitly instead of being discovered from disk, for the same reason
@@ -13,4 +14,5 @@ import * as initial from './001_initial.js'
  */
 export const migrations: Record<string, Migration> = {
   '001_initial': initial,
+  '002_house_checkout_time': houseCheckoutTime,
 }

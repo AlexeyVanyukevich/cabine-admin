@@ -40,6 +40,53 @@ describe('POST /api/houses', () => {
     ])
   })
 
+  // The owner names an extra; they do not invent an identifier for it. A code typed by a
+  // person is a code that will eventually be typed differently.
+  it('generates the add-on code when only a label and a price are given', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/houses',
+      cookies,
+      payload: { ...house(), addons: [{ label: 'Купель', default_price: 70000 }] },
+    })
+
+    expect(response.statusCode).toBe(201)
+    const [addon] = response.json().addons
+    expect(addon).toMatchObject({ label: 'Купель', default_price: 70000 })
+    expect(addon.code).toEqual(expect.any(String))
+    expect(addon.code.length).toBeGreaterThan(0)
+  })
+
+  it('keeps two generated codes apart within one house', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/houses',
+      cookies,
+      payload: {
+        ...house(),
+        addons: [
+          { label: 'Баня', default_price: 50000 },
+          { label: 'Купель', default_price: 70000 },
+        ],
+      },
+    })
+
+    expect(response.statusCode).toBe(201)
+    const codes = response.json().addons.map((addon: { code: string }) => addon.code)
+    expect(new Set(codes).size).toBe(2)
+  })
+
+  it('records the check-out time and answers with it', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/houses',
+      cookies,
+      payload: { ...house(), checkout_time: '11:00' },
+    })
+    expect(response.statusCode).toBe(201)
+    expect(response.json().checkout_time).toBe('11:00')
+  })
+
   it('refuses a second house pointing at the same engine resource', async () => {
     await app.inject({ method: 'POST', url: '/api/houses', cookies, payload: house() })
     const second = await app.inject({

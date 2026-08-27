@@ -27,6 +27,27 @@ describe('schema', () => {
     expect(rows[0]?.is_nullable).toBe('NO')
   })
 
+  // Check-out has no engine equivalent. A slot ends at the next boundary, so the hours
+  // between the guest leaving and that boundary are turnaround; the time itself is only
+  // information for the guest, and lives here.
+  it('keeps the check-out time on the house', async () => {
+    const { rows } = await sql<{ data_type: string; is_nullable: string }>`
+      select data_type, is_nullable from information_schema.columns
+      where table_name = 'houses' and column_name = 'checkout_time'
+    `.execute(getTestDb())
+    expect(rows[0]?.data_type).toBe('time without time zone')
+  })
+
+  // Check-in is deliberately absent: it is the engine's slot_anchor_time, and a copy here
+  // would be a second answer to a question the engine already owns.
+  it('does not copy the check-in time', async () => {
+    const { rows } = await sql<{ count: string }>`
+      select count(*)::text as count from information_schema.columns
+      where table_name = 'houses' and column_name in ('checkin_time', 'check_in_time')
+    `.execute(getTestDb())
+    expect(rows[0]!.count).toBe('0')
+  })
+
   // The single most important structural guarantee: no dates, no status, stored here.
   it.each(['start_time', 'end_time', 'check_in', 'check_out', 'status', 'nights', 'total'])(
     'has no %s column on booking_details',

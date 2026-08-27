@@ -1,6 +1,6 @@
 import type { EngineClient } from '../../engine/client.js'
 import { ConflictError, NotFoundError, ValidationError } from '../../shared/errors.js'
-import type { House, HouseInput, HouseRepository } from './house.repository.js'
+import type { AddonInput, House, HouseInput, HouseRepository } from './house.repository.js'
 
 export class HouseService {
   constructor(
@@ -42,7 +42,8 @@ export class HouseService {
     patch: {
       name?: string
       price_per_night?: number
-      addons?: Array<{ code: string; label: string; default_price: number }>
+      checkout_time?: string
+      addons?: AddonInput[]
     },
   ): Promise<House> {
     await this.byId(id)

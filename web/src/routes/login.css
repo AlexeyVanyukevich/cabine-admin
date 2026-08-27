@@ -1,0 +1,105 @@
+.login {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+  background: var(--paper);
+}
+
+.login__card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-low);
+  padding: 28px 24px 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The mark is the interface in miniature: two houses, one of them occupied tonight. */
+.login__mark {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.login__window {
+  width: 26px;
+  height: 34px;
+  border-radius: 3px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-sunk);
+}
+
+.login__window--lit {
+  background: var(--lit);
+  border-color: var(--lit);
+}
+
+.login__title {
+  font-size: 26px;
+  letter-spacing: -0.02em;
+}
+
+.login__subtitle {
+  margin: 4px 0 24px;
+  color: var(--ink-faint);
+  font-size: 14px;
+}
+
+.login__label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+
+.login__input {
+  height: var(--tap);
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  /* 16px keeps iOS from zooming the page when the field takes focus. */
+  font-size: 16px;
+}
+
+.login__error {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--alert-soft);
+  color: var(--alert);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.login__submit {
+  margin-top: 20px;
+  height: var(--tap);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--water);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.login__submit:hover:not(:disabled) {
+  background: var(--water-deep);
+}
+
+.login__submit:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@media (prefers-color-scheme: dark) {
+  .login__submit {
+    color: var(--paper);
+  }
+}

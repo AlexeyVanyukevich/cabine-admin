@@ -1,0 +1,12 @@
+# Generated from the engine's OpenAPI document. Formatting it here would put this repository
+# permanently one `npm run engine:types` away from a diff, which is exactly the signal that
+# is supposed to mean "the engine changed its contract".
+server/src/engine/schema.d.ts
+
+node_modules
+dist
+package-lock.json
+server/public
+test-results
+playwright-report
+.run

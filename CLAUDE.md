@@ -5,19 +5,19 @@ never a replacement for it.
 
 ## The two projects
 
-| | This repository | `../booking-engine` |
-| --- | --- | --- |
-| Owns | guests, money, add-ons, notes | slots, availability, bookings, holds |
-| Knows about houses | names, prices, which add-on each has | nothing — a resource is opaque |
-| Users | one owner, from the internet, phone included | any tenant's backend, by API key |
-| Deployed | its own service and database | its own service and database |
+|                    | This repository                              | `../booking-engine`                  |
+| ------------------ | -------------------------------------------- | ------------------------------------ |
+| Owns               | guests, money, add-ons, notes                | slots, availability, bookings, holds |
+| Knows about houses | names, prices, which add-on each has         | nothing — a resource is opaque       |
+| Users              | one owner, from the internet, phone included | any tenant's backend, by API key     |
+| Deployed           | its own service and database                 | its own service and database         |
 
 The engine lives at `../booking-engine` on this machine. To read it in a session:
 `/add-dir ../booking-engine`. Its own documentation is the contract:
 
 - `../booking-engine/docs/architecture.md` — the data model and the API surface
 - `../booking-engine/docs/conventions.md` — error shapes, time and date rules, **the scope table**
-- `../booking-engine/docs/superpowers/specs/` — one spec per slice, each explaining *why*
+- `../booking-engine/docs/superpowers/specs/` — one spec per slice, each explaining _why_
 
 ## Invariants that must not be broken
 

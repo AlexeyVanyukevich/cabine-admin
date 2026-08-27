@@ -32,31 +32,31 @@ Restated here because a task may be executed by someone who sees only that task.
 
 **Server:**
 
-| File | Responsibility |
-| --- | --- |
-| `server/src/config.ts` | Environment parsing, one validated object |
-| `server/src/app.ts` | `buildApp`, error handler, route registration, static SPA |
-| `server/src/server.ts` | Entrypoint |
-| `server/src/db/{client,schema,migrate}.ts`, `db/migrations/` | Kysely wiring and the schema |
-| `server/src/engine/schema.d.ts` | **Generated** from the engine's OpenAPI. Never hand-edited |
-| `server/src/engine/errors.ts` | `EngineError`, code classification, retryability |
-| `server/src/engine/client.ts` | The facade: key, timeout, backoff, idempotency |
-| `server/src/shared/nights.ts` | Pure: local date extraction, night counting, half-open ranges |
-| `server/src/shared/money.ts` | Pure: totals, balance |
-| `server/src/shared/errors.ts` | `AppError` subclasses and the Fastify error handler |
-| `server/src/modules/auth/` | Password, sessions, the `onRequest` guard, `Origin` check |
-| `server/src/modules/houses/` | Houses and their add-ons |
-| `server/src/modules/guests/` | Guests, phone normalisation, history |
-| `server/src/modules/bookings/` | The engine-first write, the calendar join, orphans |
+| File                                                         | Responsibility                                                |
+| ------------------------------------------------------------ | ------------------------------------------------------------- |
+| `server/src/config.ts`                                       | Environment parsing, one validated object                     |
+| `server/src/app.ts`                                          | `buildApp`, error handler, route registration, static SPA     |
+| `server/src/server.ts`                                       | Entrypoint                                                    |
+| `server/src/db/{client,schema,migrate}.ts`, `db/migrations/` | Kysely wiring and the schema                                  |
+| `server/src/engine/schema.d.ts`                              | **Generated** from the engine's OpenAPI. Never hand-edited    |
+| `server/src/engine/errors.ts`                                | `EngineError`, code classification, retryability              |
+| `server/src/engine/client.ts`                                | The facade: key, timeout, backoff, idempotency                |
+| `server/src/shared/nights.ts`                                | Pure: local date extraction, night counting, half-open ranges |
+| `server/src/shared/money.ts`                                 | Pure: totals, balance                                         |
+| `server/src/shared/errors.ts`                                | `AppError` subclasses and the Fastify error handler           |
+| `server/src/modules/auth/`                                   | Password, sessions, the `onRequest` guard, `Origin` check     |
+| `server/src/modules/houses/`                                 | Houses and their add-ons                                      |
+| `server/src/modules/guests/`                                 | Guests, phone normalisation, history                          |
+| `server/src/modules/bookings/`                               | The engine-first write, the calendar join, orphans            |
 
 **Web:**
 
-| File | Responsibility |
-| --- | --- |
-| `web/src/api.ts` | Typed calls to *this* server, never to the engine |
-| `web/src/routes/{Login,Calendar,Guests}.tsx` | Pages |
-| `web/src/calendar/{Timeline,NightGrid,useSelection}.tsx` | The month timeline over nights |
-| `web/src/booking/BookingForm.tsx` | Guest, price, add-ons, deposit |
+| File                                                     | Responsibility                                    |
+| -------------------------------------------------------- | ------------------------------------------------- |
+| `web/src/api.ts`                                         | Typed calls to _this_ server, never to the engine |
+| `web/src/routes/{Login,Calendar,Guests}.tsx`             | Pages                                             |
+| `web/src/calendar/{Timeline,NightGrid,useSelection}.tsx` | The month timeline over nights                    |
+| `web/src/booking/BookingForm.tsx`                        | Guest, price, add-ons, deposit                    |
 
 **Tests:** `server/tests/{unit,integration}/`, `tests/ui/` (Playwright, whole product).
 
@@ -1171,7 +1171,11 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addCheckConstraint('booking_details_deposit_not_negative', sql`deposit >= 0`)
     .execute()
 
-  await db.schema.createIndex('booking_details_guest_idx').on('booking_details').column('guest_id').execute()
+  await db.schema
+    .createIndex('booking_details_guest_idx')
+    .on('booking_details')
+    .column('guest_id')
+    .execute()
 
   // One row today, and no `id = 1` check: a second owner is likely enough that pinning the
   // secret to a fixed key would only have to be undone. See the spec's login section.
@@ -1511,21 +1515,33 @@ seeing every booking shifted by a day."
 export interface EngineBooking {
   id: string
   resourceId: string
-  checkIn: string   // YYYY-MM-DD, house-local
-  checkOut: string  // YYYY-MM-DD, house-local
+  checkIn: string // YYYY-MM-DD, house-local
+  checkOut: string // YYYY-MM-DD, house-local
   status: 'held' | 'confirmed' | 'cancelled' | 'completed' | 'no_show' | 'expired'
 }
-export interface EngineSlot { date: string; available: boolean }
+export interface EngineSlot {
+  date: string
+  available: boolean
+}
 
 export interface EngineClient {
   listBookings(from: string, to: string): Promise<EngineBooking[]>
   getBooking(id: string): Promise<EngineBooking | undefined>
   availability(resourceId: string, from: string, to: string): Promise<EngineSlot[]>
-  createBooking(resourceId: string, checkIn: string, checkOut: string, idempotencyKey: string): Promise<EngineBooking>
+  createBooking(
+    resourceId: string,
+    checkIn: string,
+    checkOut: string,
+    idempotencyKey: string,
+  ): Promise<EngineBooking>
   reschedule(id: string, checkIn: string, checkOut: string): Promise<EngineBooking>
   cancel(id: string): Promise<EngineBooking>
 }
-export class EngineError extends Error { code: string; status: number; details?: unknown }
+export class EngineError extends Error {
+  code: string
+  status: number
+  details?: unknown
+}
 export class EngineUnreachableError extends Error {}
 ```
 
@@ -1615,7 +1631,10 @@ export class EngineError extends Error {
 
 /** No answer at all: connection refused, DNS failure, or our own timeout. */
 export class EngineUnreachableError extends Error {
-  constructor(message: string, readonly cause?: unknown) {
+  constructor(
+    message: string,
+    readonly cause?: unknown,
+  ) {
     super(message)
     this.name = 'EngineUnreachableError'
   }
@@ -1973,7 +1992,7 @@ async function resourceOf(resourceId: string) {
 }
 ```
 
-Formatting `YYYY-MM-DD` plus `HH:MM` in a named zone into an offset timestamp needs the zone's rules, so add `luxon` to the server and use `DateTime.fromISO(\`${date}T${anchor}\`, { zone })`. `reschedule` needs the resource id, which `getBooking` supplies.
+Formatting `YYYY-MM-DD` plus `HH:MM` in a named zone into an offset timestamp needs the zone's rules, so add `luxon` to the server and use `DateTime.fromISO(\`${date}T${anchor}\`, { zone })`. `reschedule`needs the resource id, which`getBooking` supplies.
 
 Expected after the fix: PASS, all cases.
 
@@ -2992,8 +3011,9 @@ it('recomputes the total when the stay gets longer', async () => {
     checkIn: '2026-09-20',
     checkOut: '2026-09-22',
   })
-  expect((await app.inject({ method: 'GET', url: `/api/bookings/${id}`, cookies })).json().total)
-    .toBe(65000)
+  expect(
+    (await app.inject({ method: 'GET', url: `/api/bookings/${id}`, cookies })).json().total,
+  ).toBe(65000)
 
   await app.inject({
     method: 'POST',
@@ -3281,7 +3301,11 @@ describe('selectionReducer', () => {
   // skipped a booked night would submit a stay the engine refuses.
   it('stops at an occupied night instead of jumping over it', () => {
     let state = selectionReducer(idle, { type: 'start', date: '2026-09-20' })
-    state = selectionReducer(state, { type: 'over', date: '2026-09-23', free: ['2026-09-20', '2026-09-21'] })
+    state = selectionReducer(state, {
+      type: 'over',
+      date: '2026-09-23',
+      free: ['2026-09-20', '2026-09-21'],
+    })
     expect(state).toMatchObject({ checkIn: '2026-09-20', checkOut: '2026-09-22' })
   })
 
@@ -3367,12 +3391,14 @@ git commit -m "feat: the night timeline, drag selection and the booking form"
 
 **Files:**
 
-- Create: `run`, `README.md`, `Dockerfile`, `Caddyfile`
+- Create: `run`, `README.md`, `Dockerfile`
 - Modify: `package.json`
 
 - [ ] **Step 1: Write the run script**
 
-Modelled on the engine's, with the same preflight-and-explain habit. Scenarios: `dev` (this project's Postgres in Docker, server and Vite together with labelled output, `--bg` and `stop`), `test`, `test:ui`, `check`, `psql`, `migrate`, `owner:password`.
+Modelled on the engine's, with the same preflight-and-explain habit. Scenarios: `dev` (this project's Postgres in Docker, server and Vite together with labelled output, `--bg` and `stop`), `test`, `test:ui`, `check`, `migrate`, `owner:password`.
+
+No `psql` scenario. Nothing in the product uses it — the server talks to Postgres through `pg`, migrations run through `tsx`, the tests use Testcontainers — and a database shell is one `docker compose exec` away on the rare occasion it is wanted, without the script implying a client has to be installed.
 
 `dev` additionally checks that the engine answers on `ENGINE_URL` and fails with an instruction if it does not — the calendar is unusable without it, and "connection refused" in a browser console is a worse first experience than a sentence naming the cause.
 
@@ -3380,9 +3406,11 @@ Modelled on the engine's, with the same preflight-and-explain habit. Scenarios: 
 
 Quick start, the engine as a prerequisite, how to issue the `Site backend` key in the engine's console, the environment table, and one short section repeating why the key never reaches the browser.
 
-- [ ] **Step 3: Write the Dockerfile and the Caddyfile**
+- [ ] **Step 3: Write the Dockerfile**
 
-Multi-stage: build both workspaces, ship `server/dist` and `server/public`. Caddy terminates TLS and proxies to the server; the comment records that HTTPS is not decoration — the session cookie is `Secure` and simply will not be set without it.
+Multi-stage: build both workspaces, ship `server/dist` and `server/public`, one container serving the API and the app from one origin.
+
+No TLS terminator is shipped. HTTPS is still required — the session cookie is `Secure` and will not be stored without it, so login appears to work and then silently does not — but that requirement is recorded in the README rather than as a config file for a tool the owner may never have run.
 
 - [ ] **Step 4: Full verification**
 
@@ -3392,7 +3420,7 @@ Expected: types clean, formatting clean, every suite green.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add run README.md Dockerfile Caddyfile package.json
+git add run README.md Dockerfile package.json
 git commit -m "docs: run scenarios, deployment and the key handling rules"
 ```
 

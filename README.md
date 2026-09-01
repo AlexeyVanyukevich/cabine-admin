@@ -9,20 +9,21 @@ The engine owns availability and bookings; this project owns people and money.
 
 ## Documentation
 
-**Start here.** These two are authoritative for what the project does today, and together they
-are the whole onboarding path:
+**Start here.** These three are authoritative, and together they are the whole onboarding path:
 
 | Document                                     | What it holds                                                            |
 | -------------------------------------------- | ------------------------------------------------------------------------ |
 | [docs/architecture.md](docs/architecture.md) | The system: the engine client, the data model, bookings, calendar, login |
+| [CONTRIBUTING.md](CONTRIBUTING.md)           | How we write code here: conventions, commits, and what a slice must do   |
 | This file                                    | Running it, configuring it, deploying it                                 |
+
+Read the third only if you are running it, and the second only if you are changing it.
 
 Reference, consulted rather than read through:
 
 | Document                                                           | What it holds                                                                        |
 | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
-| [CONTRIBUTING.md](CONTRIBUTING.md)                                 | Commit conventions, and the rule that keeps these documents true                     |
-| [CLAUDE.md](CLAUDE.md)                                             | The same invariants, addressed to an agent working in the repository                 |
+| [CLAUDE.md](CLAUDE.md)                                             | The invariants and a pointer to the above, addressed to an agent in the repository   |
 | [server/src/engine/schema.d.ts](server/src/engine/schema.d.ts)     | The engine's contract, generated from its OpenAPI. Never hand-edited                 |
 | [docs/superpowers/specs/](docs/superpowers/specs/)                 | Decision records, one per slice — read for _why_, never for what                     |
 | [docs/superpowers/plans/archive/](docs/superpowers/plans/archive/) | The task-by-task plans that built each slice. Spent scaffolding, kept for provenance |

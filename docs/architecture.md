@@ -5,8 +5,9 @@ spec in [superpowers/specs/](superpowers/specs/) or an archived plan, this docum
 and the other is stale: a spec states what was decided on its date and is not revised to match
 later work. Closing such a gap means correcting this document, not consulting the spec.
 
-Together with [../README.md](../README.md) — how to run, configure and deploy the thing — this
-is the whole onboarding path. Nothing else has to be read.
+This document covers what the system does. Two others complete the onboarding path, and nothing
+else has to be read: [../README.md](../README.md) for running, configuring and deploying it, and
+[../CONTRIBUTING.md](../CONTRIBUTING.md) for the conventions code here is written to.
 
 The specs in [superpowers/specs/](superpowers/specs/) are **decision records**. Read one to
 learn _why_ something has the shape it does, never to learn what it does. The executed plans

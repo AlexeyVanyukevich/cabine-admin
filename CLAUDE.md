@@ -63,8 +63,14 @@ copy of the engine's types — a second copy of a contract drifts silently.
 
 ## Conventions
 
-Same as the engine, and for the same reasons — they are written down in
-`../booking-engine/docs/conventions.md` and proven across its suite. TypeScript strict,
-NodeNext modules with `.js` on relative imports, Fastify 5 with TypeBox, Kysely + `pg`,
-Postgres 16, Vitest + Testcontainers, Playwright. Errors keep the shape
-`{ error, message, details? }`. Unknown fields in a request body are rejected, never ignored.
+**`CONTRIBUTING.md` is where the conventions live** — TypeScript settings, module resolution,
+the stack, the HTTP rules, layout and testing. Read it before writing code, and correct it
+there when a rule changes rather than restating the rule here.
+
+The ones that bite most often, repeated because they shape almost every edit:
+
+- Server modules are `NodeNext`: relative imports carry `.js` even in a `.ts` file. The web
+  workspace does not.
+- Errors keep the shape `{ error, message, details? }`, and every request body is TypeBox with
+  `additionalProperties: false` — unknown fields are rejected, never ignored.
+- The TypeBox package is `typebox`, not `@sinclair/typebox`.

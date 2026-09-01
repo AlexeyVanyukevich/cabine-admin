@@ -5,6 +5,48 @@
 Everything in this repository is written in English: code, identifiers, comments,
 documentation and commit messages. The interface the owner sees is Russian; nothing else is.
 
+## Code conventions
+
+The same set as `../booking-engine`, and for the same reasons — they are written down in
+[`../booking-engine/docs/conventions.md`](../booking-engine/docs/conventions.md) and proven
+across its suite. Read that for the shared detail; what follows is the working subset and the
+handful of rules local to this repository.
+
+**TypeScript.** `strict: true`, plus `noUncheckedIndexedAccess` and
+`exactOptionalPropertyTypes` in `tsconfig.base.json`. No `any` in hand-written code — the only
+occurrences are the `Kysely<any>` signatures Kysely's migration API requires.
+
+**Modules.** The server is `NodeNext`, so relative imports carry a `.js` extension even in a
+`.ts` file: `import { localDate } from '../shared/nights.js'`. The web workspace is bundler
+resolution and does not.
+
+**Stack.** Fastify 5 with TypeBox, Kysely + `pg`, Postgres 16, Vitest + Testcontainers,
+Playwright. React + Vite, React Router and TanStack Query on the client. The TypeBox package is
+`typebox`, not `@sinclair/typebox`, paired with `@fastify/type-provider-typebox`.
+
+**HTTP.** Errors keep the shape `{ error, message, details? }`. Every request body is a TypeBox
+schema with `additionalProperties: false` — unknown fields are rejected, never ignored. Bodies
+are validated before anything is written, so a bad request never reaches the engine.
+
+**Money is integer minor units.** No float anywhere near a total. Roubles are converted exactly
+once, at the edge of an input.
+
+**Dates.** The engine returns timestamps carrying the house's own offset, and the local date is
+taken from that offset — never by parsing into a `Date` and asking it, which would answer in the
+reader's timezone.
+
+**The engine contract is generated.** `server/src/engine/schema.d.ts` comes from the engine's
+OpenAPI document via `npm run engine:types`. Never hand-edit it, and never hand-write a parallel
+copy of the engine's types.
+
+**Layout.** Server code is `server/src/modules/<area>/` with `*.repository.ts`, `*.service.ts`,
+`*.routes.ts` and `*.schemas.ts`; pure helpers live in `server/src/shared/`. Tests are
+`server/tests/{unit,integration}/` and `tests/ui/` for browser journeys.
+
+The behavioural rules these serve — why no dates are stored, why writes reach the engine first,
+why an unreachable engine must not render an empty calendar — are in
+[docs/architecture.md](docs/architecture.md). Read it before changing behaviour.
+
 ## Commit messages
 
 We follow [Conventional Commits](https://www.conventionalcommits.org/), the same as

@@ -95,6 +95,7 @@ export interface paths {
                             capacity: number;
                             concurrency_mode: string;
                             is_active: boolean;
+                            pool_id: string | null;
                         }[];
                     };
                 };
@@ -178,10 +179,15 @@ export interface paths {
                          */
                         capacity?: number;
                         /**
-                         * @description `exclusive` — one booking per slot. `shared` — up to `capacity` per slot. `pool` — a group of interchangeable resources, **not implemented yet** and rejected with 400.
+                         * @description `exclusive` — one booking per slot. `shared` — up to `capacity` per slot. `pool` — a group of interchangeable resources; a booking against it lands on a member. Members carry `pool_id` and must be `exclusive`.
                          * @example exclusive
                          */
                         concurrency_mode: "exclusive" | "shared" | "pool";
+                        /**
+                         * Format: uuid
+                         * @description The pool this resource belongs to. The target must be a resource with `concurrency_mode: "pool"`, in the same tenant, and must share this resource's timezone, slot_duration and slot_anchor_time.
+                         */
+                        pool_id?: string;
                     };
                 };
             };
@@ -200,7 +206,8 @@ export interface paths {
                          *       "slot_anchor_time": "14:00",
                          *       "capacity": 1,
                          *       "concurrency_mode": "exclusive",
-                         *       "is_active": true
+                         *       "is_active": true,
+                         *       "pool_id": null
                          *     }
                          */
                         "application/json": {
@@ -217,6 +224,7 @@ export interface paths {
                             capacity: number;
                             concurrency_mode: string;
                             is_active: boolean;
+                            pool_id: string | null;
                         };
                     };
                 };
@@ -290,7 +298,8 @@ export interface paths {
                          *       "slot_anchor_time": "14:00",
                          *       "capacity": 1,
                          *       "concurrency_mode": "exclusive",
-                         *       "is_active": true
+                         *       "is_active": true,
+                         *       "pool_id": null
                          *     }
                          */
                         "application/json": {
@@ -307,6 +316,7 @@ export interface paths {
                             capacity: number;
                             concurrency_mode: string;
                             is_active: boolean;
+                            pool_id: string | null;
                         };
                     };
                 };
@@ -498,6 +508,7 @@ export interface paths {
                         capacity?: number;
                         /** @description Soft-disable. An inactive resource returns an empty slot list. */
                         is_active?: boolean;
+                        pool_id?: string | null;
                     };
                 };
             };
@@ -516,7 +527,8 @@ export interface paths {
                          *       "slot_anchor_time": "14:00",
                          *       "capacity": 1,
                          *       "concurrency_mode": "exclusive",
-                         *       "is_active": true
+                         *       "is_active": true,
+                         *       "pool_id": null
                          *     }
                          */
                         "application/json": {
@@ -533,6 +545,7 @@ export interface paths {
                             capacity: number;
                             concurrency_mode: string;
                             is_active: boolean;
+                            pool_id: string | null;
                         };
                     };
                 };

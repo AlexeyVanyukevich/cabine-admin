@@ -32,26 +32,62 @@ Where a spec or an archived plan disagrees with `docs/architecture.md`, the arch
 document is right and the older one is stale: correct the architecture document, do not go and
 consult the spec.
 
-## Quick start
+## Before the first run
 
-The engine must be running first — the calendar cannot say which nights are free without it.
+The engine must be running before any of this. The calendar cannot say which nights are free
+without it, and `./run` refuses to start rather than open an empty one.
 
 ```bash
 (cd ../booking-engine && ./run dev --bg)
-
-cp .env.example .env       # ./run does this for you on the first run
-# paste an engine key into ENGINE_API_KEY — see below
-./run migrate
-./run owner:password       # the password you will sign in with
-./run house:add            # once per house; asks for a wider engine key
-./run dev
 ```
+
+Then, once, in this order:
+
+| Step                   | What it does                                                              |
+| ---------------------- | ------------------------------------------------------------------------- |
+| `cp .env.example .env` | `./run` does this for you on the first run                                |
+| paste `ENGINE_API_KEY` | A **Site backend** key, issued in the engine's console — see below        |
+| `./run migrate`        | Creates the tables, and nothing else                                      |
+| `./run owner:password` | The password you sign in with. Until it is set, every password is refused |
+| `./run house:add`      | Once per house. Asks for a wider engine key                               |
+
+Only the first two are genuinely manual. `migrate` runs again on every `./run dev` and
+`./run start`, and `start` checks the last two before serving anything: a missing password
+stops it with the command that fixes it, and no houses yet is a note rather than a refusal,
+because the **Дома** screen says how to add the first one.
 
 `house:add` creates the house's resource in the engine and records it here in one step, so
 you never handle a resource id by hand. Its extras — sauna, hot tub — are added afterwards on
 the **Дома** screen, where their prices can also be changed later.
 
-The app is then on <http://localhost:5173>. `./run` with no arguments lists every scenario.
+## Running it
+
+Two ways, and the difference matters. `./run` with no arguments lists every scenario.
+
+| Command       | What runs                                          | Reachable from               |
+| ------------- | -------------------------------------------------- | ---------------------------- |
+| `./run start` | The built SPA served by the built server, one port | This machine and the network |
+| `./run dev`   | `tsx watch` and Vite with hot reload, two ports    | This machine only            |
+
+**`./run start` is the one for using the tool.** It builds both workspaces, checks the setup
+above, and serves the API and the app from a single port — the shape the product actually has.
+It prints the address to open, including the one a phone on the same network should use, since
+the server binds `0.0.0.0`.
+
+**`./run dev` is the one for changing the code.** Vite's dev server binds to localhost, so a
+phone on the same network cannot open it however the address is written.
+
+Both take `--bg`, and `./run stop` ends whichever was started that way. Neither survives a
+reboot, and neither starts the engine: that stays a separate `./run dev --bg` in
+`../booking-engine`, every time.
+
+### Do not set `NODE_ENV=production` locally
+
+It makes the session cookie `Secure`, and a browser will not store a `Secure` cookie that
+arrived over plain http. You would sign in, appear to succeed, and be signed out on the very
+next tap — which reads as a broken login rather than as a wrong environment variable.
+`./run start` refuses to run rather than let that happen. The same rule seen from the other
+side is why a real deployment must be reached over HTTPS.
 
 ## Issuing the engine key
 

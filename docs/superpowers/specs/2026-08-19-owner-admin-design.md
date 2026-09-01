@@ -1,6 +1,18 @@
 # Slice 1 — The owner's journal
 
-Status: **design**, not implemented.
+Status: **shipped**, 2026-09-01.
+
+> **This is a decision record, not a description of the system.**
+>
+> It states what was decided on 2026-08-19, before any of it was built, and it is not revised
+> as the code moves on. Several things shipped differently — a house's check-out time, the
+> `house:add` and `house:checkin` commands, a resource cache in the engine client, the Дома
+> screen — and this document does not know about them.
+>
+> Read it to learn **why** something has the shape it does. For **what** the system does today,
+> read [docs/architecture.md](../../architecture.md), which is authoritative. Where the two
+> disagree, the architecture document is right and this one is stale; the fix is to correct
+> that document, not to consult this one.
 
 A consumer of the booking engine at `../booking-engine`, whose
 [architecture](../../../../booking-engine/docs/architecture.md) and

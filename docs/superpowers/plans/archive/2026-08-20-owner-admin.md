@@ -1,5 +1,17 @@
 # The owner's journal — Implementation Plan
 
+Status: **executed**, 2026-09-01. Archived.
+
+> **This plan is spent scaffolding, kept for provenance.**
+>
+> Its job ended when the work shipped. It sits outside the reading path: nobody onboarding to
+> this project needs to read it, and its unticked checkboxes describe work that is long done.
+>
+> It records how the project was built on 2026-08-20 — the order of the tasks, the code as it
+> was first written, and the reasoning at each step. Much of that code has since changed. For
+> what the system does today, read [docs/architecture.md](../../../architecture.md), which is
+> authoritative; where this plan disagrees with it, this plan is stale.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** An admin tool for one owner of two nightly-rented houses: a live calendar of both houses, bookings created through the booking engine, and the guest, price, add-ons and deposit that the engine deliberately knows nothing about.
@@ -8,9 +20,9 @@
 
 **Tech Stack:** Node 24 · TypeScript strict · Fastify 5 · TypeBox · Kysely + `pg` · PostgreSQL 16 · React 19 + Vite · React Router · TanStack Query · Vitest + Testcontainers · Playwright
 
-**Spec:** [2026-08-19-owner-admin-design.md](../specs/2026-08-19-owner-admin-design.md)
+**Spec:** [2026-08-19-owner-admin-design.md](../../specs/2026-08-19-owner-admin-design.md)
 
-**Engine contract:** [architecture.md](../../../../booking-engine/docs/architecture.md) · [conventions.md](../../../../booking-engine/docs/conventions.md)
+**Engine contract:** [architecture.md](../../../../../booking-engine/docs/architecture.md) · [conventions.md](../../../../../booking-engine/docs/conventions.md)
 
 ## Global Constraints
 

@@ -7,6 +7,30 @@ deliberately knows nothing about.
 It is a **consumer** of [`../booking-engine`](../booking-engine), never a replacement for it.
 The engine owns availability and bookings; this project owns people and money.
 
+## Documentation
+
+**Start here.** These two are authoritative for what the project does today, and together they
+are the whole onboarding path:
+
+| Document                                     | What it holds                                                            |
+| -------------------------------------------- | ------------------------------------------------------------------------ |
+| [docs/architecture.md](docs/architecture.md) | The system: the engine client, the data model, bookings, calendar, login |
+| This file                                    | Running it, configuring it, deploying it                                 |
+
+Reference, consulted rather than read through:
+
+| Document                                                           | What it holds                                                                        |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| [CONTRIBUTING.md](CONTRIBUTING.md)                                 | Commit conventions, and the rule that keeps these documents true                     |
+| [CLAUDE.md](CLAUDE.md)                                             | The same invariants, addressed to an agent working in the repository                 |
+| [server/src/engine/schema.d.ts](server/src/engine/schema.d.ts)     | The engine's contract, generated from its OpenAPI. Never hand-edited                 |
+| [docs/superpowers/specs/](docs/superpowers/specs/)                 | Decision records, one per slice — read for _why_, never for what                     |
+| [docs/superpowers/plans/archive/](docs/superpowers/plans/archive/) | The task-by-task plans that built each slice. Spent scaffolding, kept for provenance |
+
+Where a spec or an archived plan disagrees with `docs/architecture.md`, the architecture
+document is right and the older one is stale: correct the architecture document, do not go and
+consult the spec.
+
 ## Quick start
 
 The engine must be running first — the calendar cannot say which nights are free without it.
@@ -40,55 +64,40 @@ The key is issued once, in the engine's own console, and pasted into `.env`:
 
 ## The engine key never reaches a browser
 
-This is the invariant the whole architecture is arranged around, so it is worth stating
-plainly.
-
 The key lives in this server's environment and is named in exactly one file,
 `server/src/engine/client.ts`. The SPA talks only to this server; it has no idea the engine
-exists. A browser journey asserts it, reading every document, script and API response the page
-receives and failing if `bk_live_` appears in any of them.
+exists. A browser journey asserts it, failing if `bk_live_` appears in any document, script or
+API response the page receives.
 
-It matters because rules this project enforces on the way through — minimum stay, how far
-ahead a booking may be made — are only real while this server is the sole caller. The day a
-key ships to the frontend, those rules become advisory and have to move into the engine.
+Keep it that way. Rules this project enforces on the way through are only real while this
+server is the engine's sole caller — the day a key ships to the frontend they become advisory
+and have to move into the engine.
 
 ## Setting up a house
 
 A house is two things: a **resource** in the engine, which owns whether its nights are free,
-and a **row here**, which owns its name, price and extras. `./run house:add` creates both.
+and a **row here**, which owns its name, price, check-out time and extras. `./run house:add`
+creates both.
 
 It asks for a wider engine key than the running service holds, and forgets it. The service's
 key is a Site backend preset with no `resources.write`, deliberately: an internet-facing
 service should not be able to delete the tenant's resources for the rest of its life in order
 to save a step taken twice.
 
-**Check-in time is the engine's**, because it _is_ the slot boundary — the instant a night
-begins. A guest leaving at 11:00 leaves inside the slot that ends at check-in, so the gap is
-turnaround, and check-out is information for the guest rather than anything availability knows
-about. That is why check-out is editable on the Дома screen and check-in is not: moving
-check-in re-cuts every night, and a booking made under the old boundary would straddle two new
-slots. `./run house:checkin` does it anyway when you must, and refuses while the house has a
-booking from today onward.
+Check-out is editable on the **Дома** screen; check-in is not, because it is the engine's slot
+boundary and moving it re-cuts every night. `./run house:checkin` does it anyway when you must,
+and refuses while the house has a booking from today onward.
+[docs/architecture.md](docs/architecture.md#5-houses) explains why.
 
 ## How the two halves fit
 
-|              | This repository               | `../booking-engine`                  |
-| ------------ | ----------------------------- | ------------------------------------ |
-| Owns         | guests, money, add-ons, notes | slots, availability, bookings, holds |
-| Stores dates | **never**                     | yes, and they are the truth          |
-| Users        | one owner, from the internet  | any tenant's backend, by API key     |
+The engine owns whether a night is free: slots, availability, the booking's existence and its
+times. This project owns who and how much: the guest, the price, the add-ons, the deposit. No
+dates and no booking status are stored here, so the two cannot drift; rendering joins them by
+`engine_booking_id`.
 
-Three consequences worth knowing before changing anything:
-
-- **No dates and no booking status are stored here.** They come from the engine on every read
-  and are joined by `engine_booking_id`. A whole class of drift is removed by construction
-  rather than by discipline, and a test asserts those columns do not exist.
-- **Writes go to the engine first, then here.** A failure that way round leaves a booking whose
-  guest details are missing — annoying and repairable, and the calendar flags it. The reverse
-  can leave a record that does not actually hold the night, which is how two guests end up in
-  one house.
-- **Money is integer minor units.** Roubles are converted once, at the edge of an input. Prices
-  are snapshotted onto a booking when it is made, so raising a rate cannot rewrite past totals.
+[docs/architecture.md](docs/architecture.md) has the whole of it — the four invariants, the data
+model, and what happens when the engine is down. Read it before changing anything.
 
 ## Configuration
 

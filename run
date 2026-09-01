@@ -97,6 +97,52 @@ need_engine() {
       "Issue a 'Site backend' key in the engine's console and paste it in — see the README."
 }
 
+# A Secure cookie is not stored by a browser that received it over plain http, and the failure
+# is silent: the owner signs in, appears to succeed, and is signed out on the very next tap.
+# That reads as a broken login rather than a missing certificate, which is why it is refused
+# here rather than discovered on the phone.
+need_plain_http_cookie() {
+  [ "${NODE_ENV:-}" != "production" ] ||
+    die "NODE_ENV is production, so the session cookie is set Secure." \
+      "A browser will not store it over plain http. Unset NODE_ENV for a local run."
+}
+
+# Migrations create the tables and stop there. Without a password there is no way in, and the
+# symptom — every password rejected — reads as a broken build rather than a step not yet taken.
+need_setup() {
+  local state
+  state=$( cd server && DATABASE_URL="${DATABASE_URL:-$COMPOSE_DB_URL}" npx tsx scripts/setup-state.ts </dev/null ) ||
+    die "Could not read the setup state from the database." "Check:  docker compose logs db"
+
+  case "$state" in
+    *owner=missing*)
+      die "No owner password is set, so nobody can sign in." \
+        "Set one first:  ./run owner:password"
+      ;;
+  esac
+
+  # A note rather than a refusal: the Дома screen says how to add the first house, so an empty
+  # install is a state the app explains for itself.
+  case "$state" in
+    *houses=missing*)
+      note "No houses yet. The calendar stays empty until you add one:  ./run house:add"
+      ;;
+  esac
+}
+
+# Best effort, and never fatal. The phone is the whole reason the server binds 0.0.0.0, but
+# failing to guess which address it should be reached on is no reason not to start.
+lan_address() {
+  local ip=''
+  if command -v ipconfig >/dev/null 2>&1; then
+    ip=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || true)
+  fi
+  if [ -z "$ip" ]; then
+    ip=$(hostname -I 2>/dev/null | awk '{print $1}' || true)
+  fi
+  printf '%s' "$ip"
+}
+
 start_db() {
   need_docker
   step "Starting Postgres on port ${DB_HOST_PORT}"
@@ -152,10 +198,48 @@ scenario_dev() {
   wait
 }
 
+# The counterpart of `dev`: the built SPA served by the built server, both on one port, which
+# is the shape the product actually has. `dev` puts Vite on a second port bound to localhost,
+# so it is reachable from this machine and from nowhere else — and a tool the owner opens from
+# a phone has to be reachable from the phone.
+scenario_start() {
+  need_node; need_deps; need_env
+  need_plain_http_cookie
+  start_db
+  run_migrations
+  need_engine
+  need_setup
+  scenario_build
+
+  export DATABASE_URL="${DATABASE_URL:-$COMPOSE_DB_URL}"
+  export PORT="$APP_PORT"
+
+  local lan; lan=$(lan_address)
+
+  if [ "${1:-}" = "--bg" ]; then
+    mkdir -p "$RUN_STATE"
+    npm run --workspace server start >"$RUN_STATE/app.log" 2>&1 & echo $! >"$RUN_STATE/app.pid"
+    ok "Running in the background"
+    note "http://localhost:${APP_PORT}   logs: ${RUN_STATE}/app.log   stop: ./run stop"
+    if [ -n "$lan" ]; then
+      note "From a phone on the same network: http://${lan}:${APP_PORT}"
+    fi
+    return 0
+  fi
+
+  ok "http://localhost:${APP_PORT}"
+  if [ -n "$lan" ]; then
+    note "From a phone on the same network: http://${lan}:${APP_PORT}"
+  fi
+  note "Ctrl-C stops it"
+  npm run --workspace server start
+}
+
+# Everything `dev --bg` and `start --bg` leave behind, whichever of the two it was: one stop
+# command that does not have to be told which way the stack was started.
 scenario_stop() {
   local stopped=0
-  for name in server web; do
-    local pidfile="$RUN_STATE/$name.pid"
+  for pidfile in "$RUN_STATE"/*.pid; do
     [ -f "$pidfile" ] || continue
     local pid; pid=$(cat "$pidfile")
     if kill -0 "$pid" 2>/dev/null; then
@@ -238,17 +322,19 @@ usage() {
 ${BOLD}./run <scenario>${OFF}
 
   ${BOLD}dev${OFF} [--bg]     Postgres, migrations, the server and Vite together
-  ${BOLD}stop${OFF}           stop whatever ${BOLD}dev --bg${OFF} started
-  ${BOLD}test${OFF}           server and web unit suites
+  ${BOLD}start${OFF} [--bg]   the built app on one port, reachable from a phone on this network
+  ${BOLD}stop${OFF}           stop whatever ${BOLD}dev --bg${OFF} or ${BOLD}start --bg${OFF} left running
+  ${BOLD}test${OFF}           the server and web suites
   ${BOLD}test:ui${OFF}        browser journeys against the whole product
-  ${BOLD}check${OFF}          types, formatting and every suite
+  ${BOLD}check${OFF}          types, formatting, and the server and web suites
   ${BOLD}build${OFF}          compile the server and build the SPA
   ${BOLD}migrate${OFF}        apply migrations to the local database
   ${BOLD}owner:password${OFF} set the owner's password (also signs every device out)
   ${BOLD}house:add${OFF}      create a house: its engine resource, then its row here
   ${BOLD}house:checkin${OFF}  move a house's check-in time, if it has no future bookings
 
-The booking engine must be running for ${BOLD}dev${OFF}: (cd ../booking-engine && ./run dev --bg)
+Before the first ${BOLD}start${OFF}: an engine key in .env, then ${BOLD}owner:password${OFF} and ${BOLD}house:add${OFF}.
+The booking engine must be running for both: (cd ../booking-engine && ./run dev --bg)
 TEXT
 }
 
@@ -257,6 +343,7 @@ SCENARIO="${1:-}"
 
 case "$SCENARIO" in
   dev)            scenario_dev "$@" ;;
+  start)          scenario_start "$@" ;;
   stop)           scenario_stop ;;
   test)           scenario_test ;;
   test:ui)        scenario_test_ui ;;

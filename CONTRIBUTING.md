@@ -127,9 +127,10 @@ From the repository root:
 ./run check
 ```
 
-That type-checks, verifies formatting and runs every suite. It needs Docker running — the
-integration tests start their own Postgres and a real booking engine — but no database prepared.
-Browser journeys are `./run test:ui`.
+That type-checks, verifies formatting and runs the server and web suites. It needs Docker
+running — the integration tests start their own Postgres and a real booking engine — but no
+database prepared. Browser journeys are a separate `./run test:ui`, and they are part of the
+same bar: run both before opening a pull request.
 
 Tests are written before the implementation. The interesting defects in this project are at the
 seam with the engine, so the suite runs the engine itself rather than a stub.

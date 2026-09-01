@@ -3,6 +3,7 @@ import type { TypeBoxTypeProvider } from '@fastify/type-provider-typebox'
 import { GuestRepository } from './guest.repository.js'
 import { GuestService } from './guest.service.js'
 import { CreateGuestBody, GuestParams, GuestQuery, UpdateGuestBody } from './guest.schemas.js'
+import { createBookingService } from '../bookings/booking.routes.js'
 
 export function registerGuests(instance: FastifyInstance): void {
   const app = instance.withTypeProvider<TypeBoxTypeProvider>()
@@ -14,6 +15,12 @@ export function registerGuests(instance: FastifyInstance): void {
 
   app.get('/api/guests/:id', { schema: { params: GuestParams } }, async (request) =>
     service.byId(request.params.id),
+  )
+
+  // Past stays. The dates live in the engine, so this is a join rather than a query — the
+  // same shape the calendar uses, narrowed to one guest.
+  app.get('/api/guests/:id/bookings', { schema: { params: GuestParams } }, async (request) =>
+    createBookingService(app).forGuest(request.params.id),
   )
 
   app.post('/api/guests', { schema: { body: CreateGuestBody } }, async (request, reply) => {

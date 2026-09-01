@@ -23,6 +23,22 @@ export function appUrl(path: string): string {
   return `${runtime().baseURL}${path}`
 }
 
+/**
+ * The first day of the month `offset` months from now, as `YYYY-MM-DD`.
+ *
+ * Built with `Date.UTC` so December rolls into January — adding to the month number and
+ * padding it produces "2026-13-01", which renders no nights at all and fails only in
+ * December. Each spec file takes a different offset, because `resetAppDb` clears this
+ * project's tables while the engine keeps its bookings for the whole run: two files booking
+ * the same dates would collide on whichever ran second.
+ */
+export function monthStart(offset: number): string {
+  const now = new Date()
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + offset, 1))
+    .toISOString()
+    .slice(0, 10)
+}
+
 async function withDb<T>(work: (client: pg.Client) => Promise<T>): Promise<T> {
   const client = new pg.Client({ connectionString: runtime().databaseUrl })
   await client.connect()
@@ -50,6 +66,27 @@ export async function setOwnerPassword(password: string): Promise<void> {
       passwordHash,
     ]),
   )
+}
+
+/**
+ * Posts through the page's own `fetch` rather than Playwright's request context, which does
+ * not carry the session cookie here and answers 401. This runs inside the browser, so it uses
+ * exactly the session the user is signed in with.
+ */
+export async function bookViaPage(
+  page: { evaluate: <A, R>(fn: (arg: A) => R, arg: A) => Promise<R> },
+  payload: Record<string, unknown>,
+): Promise<string> {
+  return page.evaluate(async (body: Record<string, unknown>) => {
+    const response = await fetch('/api/bookings', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    if (!response.ok) throw new Error(`${response.status} ${await response.text()}`)
+    return ((await response.json()) as { id: string }).id
+  }, payload)
 }
 
 /** `which` picks one of the harness's two engine resources; a house owns its resource alone. */

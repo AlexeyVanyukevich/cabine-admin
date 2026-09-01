@@ -28,6 +28,10 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     PORT: String(PORT),
     LOG_LEVEL: 'warn',
     NODE_ENV: 'test',
+    // Every journey signs in, and they all come from 127.0.0.1, so the real limit of 10 a
+    // minute throttles the suite itself rather than an attacker. The limit has its own test
+    // in the server suite, which builds an app with a limit of 2 and watches it bite.
+    LOGIN_ATTEMPTS_PER_MINUTE: '1000',
   }
 
   const migrate = spawnSync('npx', ['tsx', 'server/src/db/migrate.ts'], {

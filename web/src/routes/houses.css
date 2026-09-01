@@ -1,0 +1,73 @@
+.house {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.house__fixed,
+.house__note {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--ink-faint);
+  line-height: 1.4;
+}
+
+.house__fixed code,
+.notice code {
+  font-size: 12px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--surface-sunk);
+  border: 1px solid var(--line);
+}
+
+.house__saved {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--water);
+  font-weight: 500;
+}
+
+.addons__empty {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+.addons__row {
+  display: grid;
+  grid-template-columns: 1fr 96px var(--tap);
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.addons__price {
+  text-align: right;
+}
+
+.addons__remove {
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+
+.addons__remove:hover {
+  border-color: var(--alert);
+  color: var(--alert);
+}
+
+.addons__add {
+  width: 100%;
+  margin-top: 2px;
+}
+
+.houses__note {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--ink-faint);
+  line-height: 1.4;
+}

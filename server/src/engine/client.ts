@@ -19,11 +19,14 @@ export interface EngineSlot {
 export interface EngineResource {
   id: string
   timezone: string
+  /** `HH:MM`. The instant a night begins — the house's check-in time. */
+  checkInTime: string
   isActive: boolean
 }
 
 export interface EngineClient {
   getResource: (id: string) => Promise<EngineResource | undefined>
+  listResources: () => Promise<EngineResource[]>
   listBookings: (from: string, to: string) => Promise<EngineBooking[]>
   getBooking: (id: string) => Promise<EngineBooking | undefined>
   availability: (resourceId: string, from: string, to: string) => Promise<EngineSlot[]>
@@ -58,6 +61,21 @@ interface RawSlot {
   end: string
   available: boolean
 }
+
+interface RawResource {
+  id: string
+  timezone: string
+  slot_anchor_time: string
+  is_active: boolean
+}
+
+const toResource = (raw: RawResource): EngineResource => ({
+  id: raw.id,
+  timezone: raw.timezone,
+  // The engine returns `HH:MM:SS`; everything above this line deals in `HH:MM`.
+  checkInTime: raw.slot_anchor_time.slice(0, 5),
+  isActive: raw.is_active,
+})
 
 export function createEngineClient(options: EngineClientOptions): EngineClient {
   const timeoutMs = options.timeoutMs ?? 5_000
@@ -150,12 +168,13 @@ export function createEngineClient(options: EngineClientOptions): EngineClient {
 
   return {
     async getResource(id) {
-      const raw = await call<{ id: string; timezone: string; is_active: boolean }>(
-        `/resources/${id}`,
-      )
-      return raw === undefined
-        ? undefined
-        : { id: raw.id, timezone: raw.timezone, isActive: raw.is_active }
+      const raw = await call<RawResource>(`/resources/${id}`)
+      return raw === undefined ? undefined : toResource(raw)
+    },
+
+    async listResources() {
+      const raw = await call<RawResource[]>('/resources')
+      return (raw ?? []).map(toResource)
     },
 
     async listBookings(from, to) {

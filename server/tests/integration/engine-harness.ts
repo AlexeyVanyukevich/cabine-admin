@@ -3,6 +3,7 @@ import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testconta
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { createHouseResource } from '../../src/engine/house-resource.js'
 
 export interface EngineHandle {
   url: string
@@ -135,49 +136,22 @@ async function bootstrapKeys(
 /**
  * `site_backend` cannot create resources, so the houses are seeded with a second, wider key
  * that is then discarded — tests must exercise the same authority production has.
+ *
+ * The shape comes from `createHouseResource`, the same function the setup command uses, so
+ * the houses these tests run against are the houses production creates.
+ *
+ * The two deliberately differ in check-in time. A single anchor everywhere would let a
+ * hardcoded 15:00 slip in unnoticed, and the calendar would be wrong for one house only.
  */
 async function seedHouses(engineUrl: string, adminKey: string): Promise<string[]> {
-  const call = (path: string, init: RequestInit) =>
-    fetch(`${engineUrl}${path}`, {
-      ...init,
-      headers: {
-        'content-type': 'application/json',
-        authorization: `Bearer ${adminKey}`,
-        ...(init.headers ?? {}),
-      },
-    })
-
-  const ids: string[] = []
-  for (const _ of [0, 1]) {
-    const created = await call('/resources', {
-      method: 'POST',
-      body: JSON.stringify({
-        timezone: 'Europe/Warsaw',
-        slot_duration: 'P1D',
-        slot_anchor_time: '15:00',
-        capacity: 1,
-        concurrency_mode: 'exclusive',
-      }),
-    })
-    if (created.status !== 201) {
-      throw new Error(`Seeding a house failed: ${created.status} ${await created.text()}`)
-    }
-    const id = ((await created.json()) as { id: string }).id
-
-    // Open every day of the week. Day-based rules carry null times.
-    const schedule = [0, 1, 2, 3, 4, 5, 6].map((day_of_week) => ({
-      day_of_week,
-      start_time: null,
-      end_time: null,
-    }))
-    const scheduled = await call(`/resources/${id}/schedule`, {
-      method: 'PUT',
-      body: JSON.stringify(schedule),
-    })
-    if (!scheduled.ok) {
-      throw new Error(`Opening a house failed: ${scheduled.status} ${await scheduled.text()}`)
-    }
-    ids.push(id)
-  }
-  return ids
+  return [
+    await createHouseResource(engineUrl, adminKey, {
+      timezone: 'Europe/Warsaw',
+      checkInTime: '15:00',
+    }),
+    await createHouseResource(engineUrl, adminKey, {
+      timezone: 'Europe/Warsaw',
+      checkInTime: '14:00',
+    }),
+  ]
 }

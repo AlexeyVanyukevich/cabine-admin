@@ -16,7 +16,9 @@ describe('the engine harness', () => {
     expect(response.status).toBe(401)
   })
 
-  it('has two houses seeded, day-based and anchored at 15:00', async () => {
+  // The two check-in times differ on purpose: a hardcoded anchor anywhere in the client would
+  // pass against a pair that shared one, and the calendar would then be wrong for one house.
+  it('has two day-based houses whose check-in times differ', async () => {
     const response = await fetch(`${inject('engineUrl')}/resources`, {
       headers: { authorization: `Bearer ${inject('engineApiKey')}` },
     })
@@ -25,10 +27,11 @@ describe('the engine harness', () => {
       slot_duration: string
       slot_anchor_time: string
     }>
+
     expect(resources).toHaveLength(2)
-    for (const resource of resources) {
-      expect(resource.slot_duration).toBe('P1D')
-      expect(resource.slot_anchor_time).toBe('15:00')
-    }
+    for (const resource of resources) expect(resource.slot_duration).toBe('P1D')
+
+    const anchors = resources.map((resource) => resource.slot_anchor_time).sort()
+    expect(anchors).toEqual(['14:00', '15:00'])
   })
 })

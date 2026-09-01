@@ -7,6 +7,12 @@ export interface HousesTable {
   name: string
   /** Minor units. */
   price_per_night: number
+  /**
+   * `HH:MM`. Information for the guest and nothing more — a slot ends at the next boundary,
+   * so the hours between check-out and that boundary are turnaround. Check-in is not here on
+   * purpose: it is the engine's `slot_anchor_time`.
+   */
+  checkout_time: Generated<string>
   created_at: Generated<Date>
 }
 

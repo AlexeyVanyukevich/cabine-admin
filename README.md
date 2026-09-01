@@ -17,9 +17,14 @@ The engine must be running first — the calendar cannot say which nights are fr
 cp .env.example .env       # ./run does this for you on the first run
 # paste an engine key into ENGINE_API_KEY — see below
 ./run migrate
-./run owner:password       # sets the password you will sign in with
+./run owner:password       # the password you will sign in with
+./run house:add            # once per house; asks for a wider engine key
 ./run dev
 ```
+
+`house:add` creates the house's resource in the engine and records it here in one step, so
+you never handle a resource id by hand. Its extras — sauna, hot tub — are added afterwards on
+the **Дома** screen, where their prices can also be changed later.
 
 The app is then on <http://localhost:5173>. `./run` with no arguments lists every scenario.
 
@@ -47,6 +52,24 @@ It matters because rules this project enforces on the way through — minimum st
 ahead a booking may be made — are only real while this server is the sole caller. The day a
 key ships to the frontend, those rules become advisory and have to move into the engine.
 
+## Setting up a house
+
+A house is two things: a **resource** in the engine, which owns whether its nights are free,
+and a **row here**, which owns its name, price and extras. `./run house:add` creates both.
+
+It asks for a wider engine key than the running service holds, and forgets it. The service's
+key is a Site backend preset with no `resources.write`, deliberately: an internet-facing
+service should not be able to delete the tenant's resources for the rest of its life in order
+to save a step taken twice.
+
+**Check-in time is the engine's**, because it _is_ the slot boundary — the instant a night
+begins. A guest leaving at 11:00 leaves inside the slot that ends at check-in, so the gap is
+turnaround, and check-out is information for the guest rather than anything availability knows
+about. That is why check-out is editable on the Дома screen and check-in is not: moving
+check-in re-cuts every night, and a booking made under the old boundary would straddle two new
+slots. `./run house:checkin` does it anyway when you must, and refuses while the house has a
+booking from today onward.
+
 ## How the two halves fit
 
 |              | This repository               | `../booking-engine`                  |
@@ -69,16 +92,17 @@ Three consequences worth knowing before changing anything:
 
 ## Configuration
 
-| Variable                    | Meaning                                                |
-| --------------------------- | ------------------------------------------------------ |
-| `DATABASE_URL`              | This project's own database, not the engine's          |
-| `ENGINE_URL`                | Where the engine answers                               |
-| `ENGINE_API_KEY`            | A **Site backend** key, issued in the engine's console |
-| `ENGINE_TIMEOUT_MS`         | How long a call to the engine may hang. Default 5000   |
-| `PORT`                      | The server. Default 4000                               |
-| `SESSION_TTL_DAYS`          | Default 30, slid on use                                |
-| `LOGIN_ATTEMPTS_PER_MINUTE` | Per IP, on the login route. Default 10                 |
-| `LOG_LEVEL`                 | Default `info`                                         |
+| Variable                    | Meaning                                                                                                |
+| --------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `DATABASE_URL`              | This project's own database, not the engine's                                                          |
+| `ENGINE_URL`                | Where the engine answers                                                                               |
+| `ENGINE_API_KEY`            | A **Site backend** key, issued in the engine's console                                                 |
+| `ENGINE_TIMEOUT_MS`         | How long a call to the engine may hang. Default 5000                                                   |
+| `PORT`                      | The server. Default 4000                                                                               |
+| `SESSION_TTL_DAYS`          | Default 30, slid on use                                                                                |
+| `ENGINE_ADMIN_KEY`          | Only for `house:add` and `house:checkin`. A wider key, used once and never held by the running service |
+| `LOGIN_ATTEMPTS_PER_MINUTE` | Per IP, on the login route. Default 10                                                                 |
+| `LOG_LEVEL`                 | Default `info`                                                                                         |
 
 ## Tests
 

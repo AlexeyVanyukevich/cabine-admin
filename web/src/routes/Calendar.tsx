@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router'
 import { api, type Booking, type CalendarView, type House } from '../api'
+import { Screen } from '../ui/Screen'
 import { Timeline } from '../calendar/Timeline'
 import { useSelection } from '../calendar/useSelection'
 import { monthBounds, monthName, shiftMonth, today } from '../calendar/nights'
@@ -11,7 +11,6 @@ import '../booking/booking.css'
 import './calendar.css'
 
 export function Calendar() {
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [month, setMonth] = useState(() => monthBounds(today()).from)
   const [open, setOpen] = useState<Booking | undefined>()
@@ -46,26 +45,13 @@ export function Calendar() {
     await queryClient.invalidateQueries({ queryKey: ['calendar'] })
   }
 
-  async function signOut() {
-    await api.post('/api/logout')
-    queryClient.clear()
-    await navigate('/login', { replace: true })
-  }
-
   const pickedHouse =
     selection.kind === 'selecting'
       ? houses.data?.find((house) => house.id === selection.houseId)
       : undefined
 
   return (
-    <div className="page">
-      <header className="topbar">
-        <div className="topbar__brand">Журнал</div>
-        <button className="topbar__signout" type="button" onClick={() => void signOut()}>
-          Выйти
-        </button>
-      </header>
-
+    <Screen title="Календарь">
       <div className="monthbar">
         <button
           className="monthbar__step"
@@ -75,7 +61,7 @@ export function Calendar() {
         >
           ←
         </button>
-        <h1 className="monthbar__title">Календарь · {monthName(month)}</h1>
+        <p className="monthbar__title">{monthName(month)}</p>
         <button
           className="monthbar__step"
           type="button"
@@ -86,7 +72,7 @@ export function Calendar() {
         </button>
       </div>
 
-      <main className="page__body">
+      <div>
         {calendar.isPending && <p className="notice">Загружаем календарь…</p>}
 
         {calendar.error && (
@@ -130,7 +116,7 @@ export function Calendar() {
             />
           </>
         )}
-      </main>
+      </div>
 
       {/* Only once the gesture ends. Opening it on the first press would put the sheet over
           the grid before the owner had finished choosing how many nights. */}
@@ -151,6 +137,6 @@ export function Calendar() {
           onChanged={() => void refresh()}
         />
       )}
-    </div>
+    </Screen>
   )
 }

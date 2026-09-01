@@ -3,6 +3,8 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { api, NotSignedIn } from './api'
 import { Login } from './routes/Login'
 import { Calendar } from './routes/Calendar'
+import { Guests } from './routes/Guests'
+import { Houses } from './routes/Houses'
 
 /**
  * The session is checked by asking the server, never by reading a cookie: the cookie is
@@ -51,6 +53,22 @@ export function App() {
           element={
             <RequireSession>
               <Calendar />
+            </RequireSession>
+          }
+        />
+        <Route
+          path="/guests"
+          element={
+            <RequireSession>
+              <Guests />
+            </RequireSession>
+          }
+        />
+        <Route
+          path="/houses"
+          element={
+            <RequireSession>
+              <Houses />
             </RequireSession>
           }
         />

@@ -88,7 +88,7 @@ need_env() {
 # naming the cause and the fix.
 need_engine() {
   local url="${ENGINE_URL:-http://localhost:3000}"
-  if ! curl -fsS --max-time 3 "${url}/health" >/dev/null 2>&1; then
+  if ! curl -fsS --max-time 3 "${url}/health" </dev/null >/dev/null 2>&1; then
     die "The booking engine is not answering on ${url}." \
       "Start it first:  (cd ../booking-engine && ./run dev --bg)"
   fi
@@ -100,7 +100,9 @@ need_engine() {
 start_db() {
   need_docker
   step "Starting Postgres on port ${DB_HOST_PORT}"
-  docker compose up -d db >/dev/null
+  # Every preflight command reads stdin from /dev/null: the scenarios that prompt or accept a
+  # pipe — owner:password, house:add — must be the only things consuming it.
+  docker compose up -d db </dev/null >/dev/null
 
   local waited=0
   # stdin comes from /dev/null on purpose: `docker compose exec` attaches it even with -T, and
@@ -189,9 +191,27 @@ scenario_migrate() {
 scenario_password() {
   need_node; need_deps; need_env
   start_db
+  run_migrations
   # Invoked directly rather than through `npm run`: this script reads a password from stdin,
   # and npm's workspace indirection does not hand a piped one through.
   ( cd server && DATABASE_URL="${DATABASE_URL:-$COMPOSE_DB_URL}" npx tsx scripts/set-password.ts )
+}
+
+scenario_house_add() {
+  need_node; need_deps; need_env
+  start_db
+  run_migrations
+  need_engine
+  # Directly rather than through `npm run`: this prompts, and npm's workspace indirection
+  # does not hand a piped or interactive stdin through.
+  ( cd server && DATABASE_URL="${DATABASE_URL:-$COMPOSE_DB_URL}" npx tsx scripts/add-house.ts )
+}
+
+scenario_house_checkin() {
+  need_node; need_deps; need_env
+  start_db
+  need_engine
+  ( cd server && DATABASE_URL="${DATABASE_URL:-$COMPOSE_DB_URL}" npx tsx scripts/set-checkin.ts )
 }
 
 scenario_check() {
@@ -225,6 +245,8 @@ ${BOLD}./run <scenario>${OFF}
   ${BOLD}build${OFF}          compile the server and build the SPA
   ${BOLD}migrate${OFF}        apply migrations to the local database
   ${BOLD}owner:password${OFF} set the owner's password (also signs every device out)
+  ${BOLD}house:add${OFF}      create a house: its engine resource, then its row here
+  ${BOLD}house:checkin${OFF}  move a house's check-in time, if it has no future bookings
 
 The booking engine must be running for ${BOLD}dev${OFF}: (cd ../booking-engine && ./run dev --bg)
 TEXT
@@ -242,6 +264,8 @@ case "$SCENARIO" in
   build)          scenario_build ;;
   migrate)        scenario_migrate ;;
   owner:password) scenario_password ;;
+  house:add)      scenario_house_add "$@" ;;
+  house:checkin)  scenario_house_checkin ;;
   ''|-h|--help)   usage ;;
   *)              die "Unknown scenario: ${SCENARIO}" "Run ./run with no arguments to see the list." ;;
 esac

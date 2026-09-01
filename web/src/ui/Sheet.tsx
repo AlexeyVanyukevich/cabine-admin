@@ -8,8 +8,8 @@ interface Props {
 }
 
 /**
- * A bottom sheet rather than a centred modal: the tool is used one-handed on a phone, and the
- * controls belong within reach of a thumb rather than at the top of the screen.
+ * A modal centred in the viewport, on the phone as well as the desktop. It caps at the height of
+ * the screen and scrolls its body, so a long form never pushes its own controls out of view.
  */
 export function Sheet({ title, onClose, children }: Props) {
   const panel = useRef<HTMLDivElement>(null)

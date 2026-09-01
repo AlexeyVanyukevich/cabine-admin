@@ -155,8 +155,11 @@ model, and what happens when the engine is down. Read it before changing anythin
 ```bash
 ./run test      # server suite and web unit tests
 ./run test:ui   # browser journeys against the whole product
-./run check     # types, formatting and every suite
+./run check     # types, formatting and ./run test
 ```
+
+`./run check` does not run the browser journeys. They drive a built product through a real
+browser and cost a minute of their own, so they stay a deliberate `./run test:ui`.
 
 The server suite runs a **real booking engine** in Docker, built from the sibling checkout,
 rather than a stub. The defects worth catching here live in the half-open night interval, the

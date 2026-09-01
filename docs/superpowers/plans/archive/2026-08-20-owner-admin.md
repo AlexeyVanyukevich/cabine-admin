@@ -1,6 +1,6 @@
 # The owner's journal — Implementation Plan
 
-Status: **executed**, 2026-08-27. Archived.
+Status: **executed**, 2026-09-01. Archived.
 
 > **This plan is spent scaffolding, kept for provenance.**
 >

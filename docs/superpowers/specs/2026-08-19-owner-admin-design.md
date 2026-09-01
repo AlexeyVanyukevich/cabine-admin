@@ -1,6 +1,6 @@
 # Slice 1 — The owner's journal
 
-Status: **shipped**, 2026-08-27.
+Status: **shipped**, 2026-09-01.
 
 > **This is a decision record, not a description of the system.**
 >

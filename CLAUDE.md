@@ -12,12 +12,26 @@ never a replacement for it.
 | Users              | one owner, from the internet, phone included | any tenant's backend, by API key     |
 | Deployed           | its own service and database                 | its own service and database         |
 
+## The documentation
+
+`docs/architecture.md` is **authoritative for what this project does today** — the engine
+client, the data model, the life of a booking, the calendar, login. Read it before changing
+behaviour. `README.md` covers running, configuring and deploying.
+
+Where either disagrees with a spec in `docs/superpowers/specs/` or an archived plan in
+`docs/superpowers/plans/archive/`, **the living document is right and the older one is stale.**
+Fix `docs/architecture.md`; do not send the reader to the spec. Specs are decision records:
+consult one for _why_ a shape was chosen, never for what the code does now. Archived plans are
+spent scaffolding and sit outside the reading path.
+
 The engine lives at `../booking-engine` on this machine. To read it in a session:
-`/add-dir ../booking-engine`. Its own documentation is the contract:
+`/add-dir ../booking-engine`. Its own documentation is the contract, and these two are the
+ones to read:
 
 - `../booking-engine/docs/architecture.md` — the data model and the API surface
 - `../booking-engine/docs/conventions.md` — error shapes, time and date rules, **the scope table**
-- `../booking-engine/docs/superpowers/specs/` — one spec per slice, each explaining _why_
+
+Consult `../booking-engine/docs/superpowers/specs/` only for _why_ the engine has a given shape.
 
 ## Invariants that must not be broken
 

@@ -1,7 +1,36 @@
+/* The frame Screen.tsx renders, kept beside the component rather than in any one route's
+   stylesheet: every signed-in screen depends on these three rules. */
+.page {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  padding-top: calc(10px + env(safe-area-inset-top));
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
 .topbar__title {
   font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.015em;
+}
+
+/* The top padding is the frame's own: a screen's first element must not have to supply the
+   gap under the topbar, because only one of them ever remembered to. */
+.page__body {
+  flex: 1;
+  padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .signout {

@@ -156,3 +156,65 @@ describe('POST /api/bookings', () => {
     expect(response.statusCode).toBe(401)
   })
 })
+
+/**
+ * The same rule that keeps `price_per_night` on the row rather than read live from the house: a
+ * booking means what it meant when it was agreed. Without this, changing the setting would
+ * relabel settled totals and show the owner a debt that never existed.
+ */
+describe('the currency a booking was agreed in', () => {
+  const setCurrency = (currency: string) =>
+    app.inject({ method: 'PATCH', url: '/api/settings', cookies, payload: { currency } })
+
+  it('is the one in force when it was made', async () => {
+    await setCurrency('BYN')
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/bookings',
+      cookies,
+      payload: booking(),
+    })
+
+    expect(response.statusCode).toBe(201)
+    expect(response.json().currency).toBe('BYN')
+  })
+
+  it('survives a later change of the setting', async () => {
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/bookings',
+      cookies,
+      payload: booking(),
+    })
+    expect(created.json().currency).toBe('RUB')
+
+    await setCurrency('EUR')
+
+    const reread = await app.inject({
+      method: 'GET',
+      url: `/api/bookings/${created.json().id}`,
+      cookies,
+    })
+    expect(reread.json().currency).toBe('RUB')
+  })
+
+  it('does not move the total either', async () => {
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/bookings',
+      cookies,
+      payload: booking(),
+    })
+    const before = created.json().total
+
+    await setCurrency('EUR')
+
+    const reread = await app.inject({
+      method: 'GET',
+      url: `/api/bookings/${created.json().id}`,
+      cookies,
+    })
+    expect(reread.json().total).toBe(before)
+  })
+})

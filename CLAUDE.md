@@ -52,7 +52,9 @@ not actually hold the night, which is how two guests end up in one house.
 reads as "everything is free".
 
 **Money is integer minor units.** No float anywhere near a total. Prices are snapshotted onto
-a booking at creation, never referenced live, so raising a rate cannot rewrite past totals.
+a booking at creation, never referenced live, so raising a rate cannot rewrite past totals. So
+is the currency, for the same reason: changing the setting decides what the next price means and
+never reinterprets one already agreed. Nothing in this project converts between currencies.
 
 ## The engine contract is generated, not written
 

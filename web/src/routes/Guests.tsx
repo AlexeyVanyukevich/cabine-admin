@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, ApiError, type Booking, type Guest } from '../api'
 import { Screen } from '../ui/Screen'
 import { Sheet } from '../ui/Sheet'
-import { money } from '../calendar/nights'
+import { currencyOf, money, owedByCurrency } from '../money'
+import { useSettings } from '../settings'
 import { formatStay } from '../booking/NewBooking'
 import './guests.css'
 
@@ -101,7 +102,10 @@ function GuestSheet({ guest, onClose }: { guest: Guest; onClose: () => void }) {
       setError(cause instanceof ApiError ? cause.message : 'Не удалось сохранить'),
   })
 
-  const owed = (stays.data ?? []).reduce((sum, stay) => sum + Math.max(stay.balance ?? 0, 0), 0)
+  // One figure per currency. A guest who stayed either side of a change owes two amounts;
+  // adding them would invent a number in neither currency.
+  const currencies = useSettings().data?.currencies
+  const owed = owedByCurrency(stays.data ?? [])
 
   return (
     <Sheet title={guest.name} onClose={onClose}>
@@ -116,10 +120,14 @@ function GuestSheet({ guest, onClose }: { guest: Guest; onClose: () => void }) {
           <dt>Ночей всего</dt>
           <dd>{(stays.data ?? []).reduce((sum, stay) => sum + stay.nights, 0)}</dd>
         </div>
-        {owed > 0 && (
+        {owed.length > 0 && (
           <div className="facts__row">
             <dt>Не оплачено</dt>
-            <dd className="facts__owed">{money(owed)}</dd>
+            <dd className="facts__owed">
+              {owed
+                .map((debt) => money(debt.owed, currencyOf(debt.currency, currencies)))
+                .join(' · ')}
+            </dd>
           </div>
         )}
       </dl>
@@ -135,7 +143,9 @@ function GuestSheet({ guest, onClose }: { guest: Guest; onClose: () => void }) {
             <span className="stays__when">{formatStay(stay.check_in, stay.check_out)}</span>
             <span className="stays__house">{stay.house_name ?? '—'}</span>
             <span className={stay.status === 'cancelled' ? 'stays__cancelled' : 'stays__total'}>
-              {stay.status === 'cancelled' ? 'отменено' : money(stay.total)}
+              {stay.status === 'cancelled'
+                ? 'отменено'
+                : money(stay.total, currencyOf(stay.currency, currencies))}
             </span>
           </li>
         ))}

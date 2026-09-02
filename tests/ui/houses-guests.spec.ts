@@ -121,6 +121,49 @@ test.describe('Дома', () => {
   })
 })
 
+test.describe('Валюта', () => {
+  test('relabels the prices without converting the numbers', async ({ page }) => {
+    await seedHouse(HOUSE)
+    await signIn(page)
+    await page.getByRole('link', { name: 'Дома' }).click()
+
+    await expect(page.getByLabel('Цена за ночь, ₽')).toHaveValue('300')
+
+    await page.getByLabel('Валюта').selectOption('BYN')
+
+    // The same number. Nothing is converted, so the owner is told to check the prices.
+    await expect(page.getByLabel('Цена за ночь, Br')).toHaveValue('300')
+    await expect(page.getByText('Суммы не пересчитываются')).toBeVisible()
+  })
+
+  /**
+   * The invariant the whole design turns on: a stay is still owed in what it was sold in after
+   * the owner starts pricing in something else. Anything else shows a debt never agreed.
+   */
+  test('leaves a booking in the currency it was sold in', async ({ page }) => {
+    const houseId = await seedHouse(HOUSE)
+    await signIn(page)
+    const { checkIn, checkOut } = stay(24)
+    await bookViaPage(page, {
+      house_id: houseId,
+      check_in: checkIn,
+      check_out: checkOut,
+      guest: { name: 'Пётр', phone: '+79990001122' },
+      price_per_night: 30000,
+      addons: [],
+      deposit: 0,
+    })
+
+    await page.getByRole('link', { name: 'Дома' }).click()
+    await page.getByLabel('Валюта').selectOption('BYN')
+    await expect(page.getByLabel('Цена за ночь, Br')).toBeVisible()
+
+    await page.getByRole('link', { name: 'Гости' }).click()
+    await page.getByRole('button', { name: /Пётр/ }).click()
+    await expect(page.locator('.stays__total')).toHaveText('600 ₽')
+  })
+})
+
 test.describe('Гости', () => {
   test('finds a returning guest however the number is written', async ({ page }) => {
     const houseId = await seedHouse(HOUSE)

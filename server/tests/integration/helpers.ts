@@ -23,6 +23,10 @@ export async function resetDb(): Promise<void> {
   await sql`truncate table booking_details, guests, house_addon_prices, houses, sessions, owners restart identity cascade`.execute(
     getTestDb(),
   )
+  // Not truncated: the settings row is seeded by the migration and only ever updated, so
+  // emptying the table would leave the app with no settings at all — a state it cannot reach
+  // in production and should not have to handle in tests.
+  await sql`update settings set currency = 'RUB'`.execute(getTestDb())
 }
 
 /**

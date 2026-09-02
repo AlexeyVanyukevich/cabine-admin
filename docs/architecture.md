@@ -164,9 +164,10 @@ houses              id · engine_resource_id · name · price_per_night · check
 house_addon_prices  id · house_id · code · label · default_price
 guests              id · name · phone (unique) · note · created_at
 booking_details     id · engine_booking_id (unique) · guest_id · price_per_night ·
-                         addons_snapshot · deposit · note · created_at · updated_at
+                         addons_snapshot · currency · deposit · note · created_at · updated_at
 owners              id · label · password_hash · created_at · updated_at
 sessions            id · owner_id → owners · token_hash · expires_at · created_at · last_seen_at
+settings            id · currency · created_at · updated_at
 ```
 
 Defined in `server/src/db/schema.ts`, migrated in `server/src/db/migrations/`.
@@ -185,8 +186,27 @@ the rate in March rewrites the total of a January booking, and the owner would s
 does not exist.
 
 **All money is integer minor units.** No float anywhere near a total; `server/src/shared/money.ts`
-rejects a non-integer. Roubles are converted exactly once, at the edge of an input in
-`web/src/calendar/nights.ts`.
+rejects a non-integer. Whole units are converted exactly once, at the edge of an input in
+`web/src/money.ts`.
+
+**The currency is a setting, and also a snapshot.** `settings.currency` is what a price entered
+now means; `booking_details.currency` is what a booking already made meant, and nothing rewrites
+it — the same argument as `price_per_night`, for the same reason. Switching the setting converts
+nothing: 65000 stays 65000 and starts rendering with another symbol, so the owner re-prices the
+houses afterwards. The alternative, an FX rate applied on read, would make a settled total drift
+with the market.
+
+The list of currencies lives in `server/src/shared/currency.ts` and is served to the browser by
+`GET /api/settings`; the web workspace keeps no copy, because a second copy of that table drifts
+and the first sign of it is a price wearing the wrong symbol. Every entry must divide into 100
+minor units — a unit test checks each against `Intl`, so admitting JPY (which has none) fails the
+suite rather than silently reinterpreting every integer in the database. The database check
+constraint tests only the _shape_ of a code; membership is decided by a TypeBox enum at the
+route, so adding a currency is one line and no migration.
+
+Amounts in different currencies are never added. A guest's outstanding balance is rendered one
+figure per currency (`owedByCurrency` in `web/src/money.ts`), because a guest who stayed before
+a switch and again after owes two sums and no single number is either of them.
 
 **Add-ons exist in two shapes on purpose.** `house_addon_prices` is the current price list;
 `booking_details.addons_snapshot` is a copy of it at the moment of sale. The overlap is the
@@ -261,6 +281,11 @@ engine is.
 
 A house is two things: a **resource** in the engine, which owns whether its nights are free, and
 a **row here**, which owns its name, price, check-out time and extras.
+
+The currency those prices are in is app-wide rather than per house, and the selector sits on the
+Дома screen because that is the only place prices are set. Per-house currencies were considered
+and rejected: the calendar puts both houses on one timeline, so every total spanning them would
+need splitting by currency for a case that does not exist while both houses are in one country.
 
 `./run house:add` creates both in one step, so no resource id is ever handled by hand. The shape
 it creates — `slot_duration: P1D`, `capacity: 1`, `concurrency_mode: exclusive`, open every day
@@ -443,6 +468,8 @@ fields are rejected, never ignored. Errors keep the shape `{ error, message, det
 | `GET /api/houses`                   | Check-in read from the engine, best-effort                    |
 | `POST /api/houses`                  | Verifies the resource exists and is not already claimed       |
 | `PATCH /api/houses/:id`             | Name, price, check-out time, add-on price list                |
+| `GET /api/settings`                 | The currency in force, and the list on offer                  |
+| `PATCH /api/settings`               | Changes the currency. Converts nothing                        |
 | `GET /api/guests?phone`             | Lookup by normalised phone                                    |
 | `GET /api/guests/:id`               |                                                               |
 | `GET /api/guests/:id/bookings`      | History, newest first                                         |

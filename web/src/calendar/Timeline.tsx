@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react'
 import type { Booking, CalendarHouse } from '../api'
 import type { SelectionState } from './useSelection'
-import { eachNight, isWeekend, money, today, weekday } from './nights'
+import { eachNight, isWeekend, today, weekday } from './nights'
+import { currencyOf, money } from '../money'
+import { useSettings } from '../settings'
 import './timeline.css'
 
 interface Props {
@@ -46,6 +48,9 @@ export function Timeline({
 }: Props) {
   const nights = eachNight(from, to)
   const now = today()
+  // Each row renders its own booking's currency: the calendar can show stays sold either side
+  // of a change, and neither may borrow the other's symbol.
+  const currencies = useSettings().data?.currencies
   const todayRow = useRef<HTMLDivElement>(null)
 
   // Opening the calendar should land on now, not on the 1st. Only when the month in view is
@@ -179,7 +184,11 @@ export function Timeline({
                         <span className="timeline__guest">
                           {booking.orphan ? 'Бронь без данных' : (booking.guest?.name ?? '—')}
                         </span>
-                        {owes && <span className="timeline__owed">{money(booking.balance)}</span>}
+                        {owes && (
+                          <span className="timeline__owed">
+                            {money(booking.balance, currencyOf(booking.currency, currencies))}
+                          </span>
+                        )}
                       </span>
                     )}
                   </button>

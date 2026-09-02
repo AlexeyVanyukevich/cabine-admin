@@ -4,6 +4,8 @@ import { GuestRepository } from '../guests/guest.repository.js'
 import { GuestService } from '../guests/guest.service.js'
 import { HouseRepository } from '../houses/house.repository.js'
 import { HouseService } from '../houses/house.service.js'
+import { SettingsRepository } from '../settings/settings.repository.js'
+import { SettingsService } from '../settings/settings.service.js'
 import { BookingRepository } from './booking.repository.js'
 import { BookingService } from './booking.service.js'
 import {
@@ -26,7 +28,8 @@ import {
 export function createBookingService(app: FastifyInstance): BookingService {
   const houses = new HouseService(new HouseRepository(app.db), app.engine)
   const guests = new GuestService(new GuestRepository(app.db))
-  return new BookingService(new BookingRepository(app.db), houses, guests, app.engine)
+  const settings = new SettingsService(new SettingsRepository(app.db))
+  return new BookingService(new BookingRepository(app.db), houses, guests, app.engine, settings)
 }
 
 export function registerBookings(instance: FastifyInstance): void {

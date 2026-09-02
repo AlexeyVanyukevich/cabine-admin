@@ -8,6 +8,7 @@ import type { Guest } from '../guests/guest.repository.js'
 import type { GuestService } from '../guests/guest.service.js'
 import type { House } from '../houses/house.repository.js'
 import type { HouseService } from '../houses/house.service.js'
+import type { SettingsService } from '../settings/settings.service.js'
 import type { BookingDetails, BookingRepository } from './booking.repository.js'
 
 export interface BookingView {
@@ -20,6 +21,11 @@ export interface BookingView {
   status: EngineBooking['status']
   price_per_night: number | null
   addons: AddonSnapshot[]
+  /**
+   * What the amounts on this booking are denominated in — as agreed, not as the setting reads
+   * today. Null only for an orphan, whose amounts this project never knew.
+   */
+  currency: string | null
   total: number | null
   deposit: number | null
   balance: number | null
@@ -51,6 +57,7 @@ export class BookingService {
     private readonly houses: HouseService,
     private readonly guests: GuestService,
     private readonly engine: EngineClient,
+    private readonly settings: SettingsService,
   ) {}
 
   /**
@@ -94,6 +101,10 @@ export class BookingService {
 
     const { guest } = await this.guests.findOrCreate(body.guest)
 
+    // Read once, here, and written onto the row: the booking records what it was agreed in,
+    // so changing the setting afterwards cannot reinterpret it.
+    const currency = await this.settings.currentCurrency()
+
     // The engine first, always. If the write below fails, a booking exists whose guest details
     // are missing: the night is correctly held and the calendar shows it as an orphan for the
     // owner to repair. The reverse order can leave a row for a booking that does not hold the
@@ -110,6 +121,7 @@ export class BookingService {
       guest_id: guest.id,
       price_per_night: body.price_per_night,
       addons_snapshot: JSON.stringify(addons),
+      currency,
       deposit,
       note: body.note ?? null,
     })
@@ -117,6 +129,7 @@ export class BookingService {
     return this.view(engineBooking, house, guest, {
       price_per_night: body.price_per_night,
       addons,
+      currency,
       deposit,
       note: body.note ?? null,
     })
@@ -260,6 +273,7 @@ export class BookingService {
     money: {
       price_per_night: number
       addons: AddonSnapshot[]
+      currency: string
       deposit: number
       note: string | null
     },
@@ -281,6 +295,7 @@ export class BookingService {
       status: engineBooking.status,
       price_per_night: money.price_per_night,
       addons: money.addons,
+      currency: money.currency,
       total,
       deposit: money.deposit,
       balance: balanceFor(total, money.deposit),
@@ -313,6 +328,7 @@ export class BookingService {
         status: engineBooking.status,
         price_per_night: null,
         addons: [],
+        currency: null,
         total: null,
         deposit: null,
         balance: null,
@@ -325,6 +341,7 @@ export class BookingService {
     return this.view(engineBooking, house, guest, {
       price_per_night: details.price_per_night,
       addons: details.addons_snapshot,
+      currency: details.currency,
       deposit: details.deposit,
       note: details.note,
     })

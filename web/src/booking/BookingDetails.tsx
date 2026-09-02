@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { api, ApiError, type Booking } from '../api'
 import { Sheet } from '../ui/Sheet'
-import { money, toMinor, toRoubles } from '../calendar/nights'
+import { currencyOf, money, toMajor, toMinor } from '../money'
+import { useSettings } from '../settings'
 import { formatStay } from './NewBooking'
 
 interface Props {
@@ -11,13 +12,18 @@ interface Props {
 }
 
 export function BookingDetails({ booking, onClose, onChanged }: Props) {
-  const [deposit, setDeposit] = useState(toRoubles(booking.deposit))
+  const [deposit, setDeposit] = useState(toMajor(booking.deposit))
   const [note, setNote] = useState(booking.note ?? '')
   const [error, setError] = useState<string | undefined>()
   const [busy, setBusy] = useState(false)
   const [confirmingCancel, setConfirmingCancel] = useState(false)
+  const settings = useSettings()
 
   const cancelled = booking.status === 'cancelled'
+
+  // The currency this booking was agreed in, not the one the owner is set to today: a stay
+  // goes on reading as it was sold however the setting changes afterwards.
+  const currency = currencyOf(booking.currency, settings.data?.currencies)
 
   async function save(event: FormEvent) {
     event.preventDefault()
@@ -85,30 +91,31 @@ export function BookingDetails({ booking, onClose, onChanged }: Props) {
         <div className="total">
           <div className="total__row">
             <span>
-              {booking.nights} × {money(booking.price_per_night)}
+              {booking.nights} × {money(booking.price_per_night, currency)}
             </span>
             <span>
               {money(
                 booking.price_per_night === null ? null : booking.price_per_night * booking.nights,
+                currency,
               )}
             </span>
           </div>
           {booking.addons.map((addon) => (
             <div className="total__row" key={addon.code}>
               <span>{addon.label}</span>
-              <span>{money(addon.price)}</span>
+              <span>{money(addon.price, currency)}</span>
             </div>
           ))}
           <div className="total__row total__row--sum">
             <span>Итого</span>
-            <span>{money(booking.total)}</span>
+            <span>{money(booking.total, currency)}</span>
           </div>
           <div
             className={`total__row ${(booking.balance ?? 0) > 0 ? 'total__row--owed' : ''}`}
             data-testid="balance"
           >
             <span>{(booking.balance ?? 0) > 0 ? 'Остаток' : 'Оплачено полностью'}</span>
-            <span>{money(booking.balance)}</span>
+            <span>{money(booking.balance, currency)}</span>
           </div>
         </div>
       )}
@@ -123,7 +130,7 @@ export function BookingDetails({ booking, onClose, onChanged }: Props) {
 
           <div className="field__row">
             <label className="field">
-              <span className="field__label">Аванс, ₽</span>
+              <span className="field__label">Аванс, {currency.symbol}</span>
               <input
                 className="field__input"
                 value={deposit}

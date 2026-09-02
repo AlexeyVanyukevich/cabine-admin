@@ -5,6 +5,12 @@ export default defineConfig({
   plugins: [react()],
   // One origin in development too, so the session cookie needs no cross-site relaxation and
   // there is no CORS to configure differently from production.
-  server: { proxy: { '/api': 'http://localhost:4000' } },
+  //
+  // `changeOrigin: false` is load-bearing, not tidiness. The server refuses any write whose
+  // `Origin` disagrees with the `Host` it was addressed to — a CSRF check that needs no
+  // configured origin. Left to its default the proxy rewrites `Host` to the target while the
+  // browser's `Origin` stays the dev server's, and every write in development is refused. The
+  // shorthand string form of a proxy entry takes that default silently.
+  server: { proxy: { '/api': { target: 'http://localhost:4000', changeOrigin: false } } },
   build: { outDir: '../server/public', emptyOutDir: true },
 })

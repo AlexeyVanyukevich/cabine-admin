@@ -96,7 +96,7 @@ export function NewBooking({ house, checkIn, checkOut, onCancel, onSaved }: Prop
             type="tel"
             inputMode="tel"
             autoComplete="tel"
-            placeholder="+7 912 345 67 89"
+            placeholder="+375 29 123 45 67"
             required
           />
         </label>

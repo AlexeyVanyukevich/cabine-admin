@@ -10,6 +10,13 @@ describe('normalisePhone', () => {
     ['8 912 345 67 89', '+79123456789'],
     ['89123456789', '+79123456789'],
     ['+79123456789', '+79123456789'],
+    // A trunk `8` followed by `0` belongs to the other code, not to +7. `8 800 …` is not a
+    // counter-example: its digits read `88…`, so it stays where it was.
+    ['+375 29 123 45 67', '+375291234567'],
+    ['8 029 123 45 67', '+375291234567'],
+    ['80291234567', '+375291234567'],
+    ['8 017 226 66 66', '+375172266666'],
+    ['8 800 555 35 35', '+78005553535'],
   ])('reduces %s to %s', (raw, expected) => {
     expect(normalisePhone(raw)).toBe(expected)
   })

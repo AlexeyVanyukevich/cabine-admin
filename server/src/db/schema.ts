@@ -50,6 +50,11 @@ export interface BookingDetailsTable {
   guest_id: string
   price_per_night: number
   addons_snapshot: ColumnType<AddonSnapshot[], string, string>
+  /**
+   * What the amounts on this row meant when it was made, snapshotted for the same reason
+   * `price_per_night` is: changing the setting later must not reinterpret a settled booking.
+   */
+  currency: Generated<string>
   deposit: number
   note: string | null
   created_at: Generated<Date>
@@ -78,6 +83,18 @@ export interface SessionsTable {
   last_seen_at: ColumnType<Date, Date | string | undefined, Date | string>
 }
 
+/**
+ * App-wide settings, one row. Created by the migration and only ever updated, so the code
+ * never has to decide what a second row would mean.
+ */
+export interface SettingsTable {
+  id: Generated<string>
+  /** ISO 4217 alpha-3. Which codes are allowed lives in `shared/currency.ts`, not here. */
+  currency: Generated<string>
+  created_at: Generated<Date>
+  updated_at: ColumnType<Date, Date | undefined, Date>
+}
+
 export interface Database {
   houses: HousesTable
   house_addon_prices: HouseAddonPricesTable
@@ -85,4 +102,5 @@ export interface Database {
   booking_details: BookingDetailsTable
   owners: OwnersTable
   sessions: SessionsTable
+  settings: SettingsTable
 }

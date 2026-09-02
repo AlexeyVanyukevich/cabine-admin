@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { api, ApiError, type House } from '../api'
 import { Sheet } from '../ui/Sheet'
-import { money, nightsBetween, toMinor } from '../calendar/nights'
+import { nightsBetween } from '../calendar/nights'
+import { money, toMinor } from '../money'
+import { useSettings } from '../settings'
 
 interface Props {
   house: House
@@ -22,6 +24,11 @@ export function NewBooking({ house, checkIn, checkOut, onCancel, onSaved }: Prop
   const [note, setNote] = useState('')
   const [error, setError] = useState<string | undefined>()
   const [busy, setBusy] = useState(false)
+
+  // A booking being made now is priced in the currency in force now; the server snapshots
+  // that same code onto the row, so what is shown here is what the booking will keep.
+  const settings = useSettings()
+  const currency = settings.data?.currency ?? { code: '', symbol: '' }
 
   const priceMinor = toMinor(price)
   const depositMinor = deposit.trim() === '' ? 0 : toMinor(deposit)
@@ -96,7 +103,7 @@ export function NewBooking({ house, checkIn, checkOut, onCancel, onSaved }: Prop
 
         <div className="field__row">
           <label className="field">
-            <span className="field__label">Цена за ночь, ₽</span>
+            <span className="field__label">Цена за ночь, {currency.symbol}</span>
             <input
               className="field__input"
               value={price}
@@ -107,7 +114,7 @@ export function NewBooking({ house, checkIn, checkOut, onCancel, onSaved }: Prop
           </label>
 
           <label className="field">
-            <span className="field__label">Аванс, ₽</span>
+            <span className="field__label">Аванс, {currency.symbol}</span>
             <input
               className="field__input"
               value={deposit}
@@ -135,7 +142,7 @@ export function NewBooking({ house, checkIn, checkOut, onCancel, onSaved }: Prop
                   }
                 />
                 <span>{addon.label}</span>
-                <span className="check__price">{money(addon.default_price)}</span>
+                <span className="check__price">{money(addon.default_price, currency)}</span>
               </label>
             ))}
           </fieldset>
@@ -155,24 +162,24 @@ export function NewBooking({ house, checkIn, checkOut, onCancel, onSaved }: Prop
         <div className="total">
           <div className="total__row">
             <span>
-              {nights} × {money(Number.isNaN(priceMinor) ? null : priceMinor)}
+              {nights} × {money(Number.isNaN(priceMinor) ? null : priceMinor, currency)}
             </span>
-            <span>{money(Number.isNaN(priceMinor) ? null : priceMinor * nights)}</span>
+            <span>{money(Number.isNaN(priceMinor) ? null : priceMinor * nights, currency)}</span>
           </div>
           {addonsMinor > 0 && (
             <div className="total__row">
               <span>Дополнительно</span>
-              <span>{money(addonsMinor)}</span>
+              <span>{money(addonsMinor, currency)}</span>
             </div>
           )}
           <div className="total__row total__row--sum">
             <span>Итого</span>
-            <span>{money(total)}</span>
+            <span>{money(total, currency)}</span>
           </div>
           {balance !== null && balance !== total && (
             <div className="total__row total__row--owed">
               <span>Остаток</span>
-              <span>{money(balance)}</span>
+              <span>{money(balance, currency)}</span>
             </div>
           )}
         </div>

@@ -67,6 +67,21 @@ export const api = {
     request<T>(path, { method: 'PATCH', body: JSON.stringify(payload) }),
 }
 
+/**
+ * How to render an amount. The list of currencies on offer is never hard-coded here: it
+ * arrives from `GET /api/settings`, because a second copy of that table would drift from the
+ * server's and the first sign of it would be a price wearing the wrong symbol.
+ */
+export interface Currency {
+  code: string
+  symbol: string
+}
+
+export interface Settings {
+  currency: Currency
+  currencies: Currency[]
+}
+
 export interface Night {
   date: string
   available: boolean
@@ -95,6 +110,8 @@ export interface Booking {
   status: 'held' | 'confirmed' | 'cancelled' | 'completed' | 'no_show' | 'expired'
   price_per_night: number | null
   addons: Array<{ code: string; label: string; price: number }>
+  /** As agreed, not as the setting reads today. Null only for an orphan. */
+  currency: string | null
   total: number | null
   deposit: number | null
   balance: number | null

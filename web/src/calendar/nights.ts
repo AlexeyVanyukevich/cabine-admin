@@ -72,23 +72,3 @@ export function today(): string {
   const now = new Date()
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 }
-
-/** Minor units to something a person reads: 65000 → «650 ₽». */
-export function money(minor: number | null): string {
-  if (minor === null) return '—'
-  return `${(minor / 100).toLocaleString('ru-RU', { maximumFractionDigits: 2 })} ₽`
-}
-
-/**
- * The owner types roubles; everything past this line is integer minor units. The rounding
- * happens once, here at the edge, so no total is ever computed from a fraction.
- */
-export function toMinor(roubles: string): number {
-  const value = Number(roubles.replace(',', '.').trim())
-  if (!Number.isFinite(value) || value < 0) return Number.NaN
-  return Math.round(value * 100)
-}
-
-export function toRoubles(minor: number | null): string {
-  return minor === null ? '' : String(minor / 100)
-}

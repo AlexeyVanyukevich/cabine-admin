@@ -28,8 +28,10 @@ Playwright. React + Vite, React Router and TanStack Query on the client. The Typ
 schema with `additionalProperties: false` — unknown fields are rejected, never ignored. Bodies
 are validated before anything is written, so a bad request never reaches the engine.
 
-**Money is integer minor units.** No float anywhere near a total. Roubles are converted exactly
-once, at the edge of an input.
+**Money is integer minor units.** No float anywhere near a total. Whole units are converted
+exactly once, at the edge of an input, in `web/src/money.ts`. Every currency on offer divides
+into 100 minor units, and `server/src/shared/currency.ts` is the only list of them — the web
+workspace gets it from `GET /api/settings` rather than keeping a copy.
 
 **Dates.** The engine returns timestamps carrying the house's own offset, and the local date is
 taken from that offset — never by parsing into a `Date` and asking it, which would answer in the

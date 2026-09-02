@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router'
-import { api, ApiError, type House } from '../api'
+import { api, ApiError, type Currency, type House, type Settings } from '../api'
 import { Screen } from '../ui/Screen'
-import { money, toMinor, toRoubles } from '../calendar/nights'
+import { money, toMajor, toMinor } from '../money'
+import { settingsKey, useSettings } from '../settings'
 import './houses.css'
 
 interface Draft {
@@ -15,14 +16,72 @@ interface Draft {
 
 const draftOf = (house: House): Draft => ({
   name: house.name,
-  price: toRoubles(house.price_per_night),
+  price: toMajor(house.price_per_night),
   checkout: house.checkout_time,
   addons: house.addons.map((addon) => ({
     code: addon.code,
     label: addon.label,
-    price: toRoubles(addon.default_price),
+    price: toMajor(addon.default_price),
   })),
 })
+
+/**
+ * Nothing is converted when this changes. The integers stay exactly as they are and start
+ * reading with a different symbol, so the owner must re-enter the prices below if the numbers
+ * no longer make sense — which is why the warning sits directly above them.
+ *
+ * Bookings already made are not affected at all: each one carries the currency it was agreed
+ * in, the same way it carries the price.
+ */
+function CurrencyPicker() {
+  const queryClient = useQueryClient()
+  const settings = useSettings()
+  const [error, setError] = useState<string | undefined>()
+
+  const change = useMutation({
+    mutationFn: (currency: string) => api.patch<Settings>('/api/settings', { currency }),
+    onSuccess: async (updated) => {
+      setError(undefined)
+      queryClient.setQueryData(settingsKey, updated)
+      await queryClient.invalidateQueries({ queryKey: ['calendar'] })
+    },
+    onError: (cause) =>
+      setError(cause instanceof ApiError ? cause.message : 'Не удалось сменить валюту'),
+  })
+
+  if (settings.data === undefined) return null
+
+  return (
+    <div className="currency">
+      <label className="field">
+        <span className="field__label">Валюта</span>
+        <select
+          className="field__input"
+          value={settings.data.currency.code}
+          disabled={change.isPending}
+          onChange={(event) => change.mutate(event.target.value)}
+        >
+          {settings.data.currencies.map((currency: Currency) => (
+            <option key={currency.code} value={currency.code}>
+              {currency.code} · {currency.symbol}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <p className="currency__note">
+        Суммы не пересчитываются: 650 остаётся 650, только со знаком новой валюты. Проверьте цены
+        ниже. Уже созданные брони сохраняют валюту, в которой были оформлены.
+      </p>
+
+      {error !== undefined && (
+        <p className="formerror" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  )
+}
 
 export function Houses() {
   const navigate = useNavigate()
@@ -38,6 +97,8 @@ export function Houses() {
 
   return (
     <Screen title="Дома">
+      <CurrencyPicker />
+
       {houses.isPending && <p className="notice">Загружаем…</p>}
 
       {houses.error && (
@@ -78,8 +139,13 @@ export function Houses() {
 
 function HouseCard({ house }: { house: House }) {
   const queryClient = useQueryClient()
+  const settings = useSettings()
   const [draft, setDraft] = useState<Draft>(() => draftOf(house))
   const [error, setError] = useState<string | undefined>()
+
+  // A house is priced in whatever the owner is set to now — unlike a booking, which keeps
+  // the currency it was sold in.
+  const currency = settings.data?.currency ?? { code: '', symbol: '' }
 
   const save = useMutation({
     mutationFn: async () => {
@@ -128,7 +194,7 @@ function HouseCard({ house }: { house: House }) {
 
       <div className="field__row">
         <label className="field">
-          <span className="field__label">Цена за ночь, ₽</span>
+          <span className="field__label">Цена за ночь, {currency.symbol}</span>
           <input
             className="field__input"
             value={draft.price}
@@ -222,7 +288,7 @@ function HouseCard({ house }: { house: House }) {
 
       {save.isSuccess && !save.isPending && (
         <p className="house__saved" role="status">
-          Сохранено · {money(toMinor(draft.price))} за ночь
+          Сохранено · {money(toMinor(draft.price), currency)} за ночь
         </p>
       )}
     </form>

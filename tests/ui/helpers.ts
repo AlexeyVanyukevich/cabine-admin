@@ -51,11 +51,14 @@ async function withDb<T>(work: (client: pg.Client) => Promise<T>): Promise<T> {
 
 /** Only this project's tables. The engine keeps its own bookings, exactly as in production. */
 export async function resetAppDb(): Promise<void> {
-  await withDb((client) =>
-    client.query(
+  await withDb(async (client) => {
+    await client.query(
       'truncate table booking_details, guests, house_addon_prices, houses, sessions, owners restart identity cascade',
-    ),
-  )
+    )
+    // Not truncated: the settings row is seeded by the migration and only ever updated. It is
+    // put back to roubles so a spec that switches the currency cannot leak into the next one.
+    await client.query("update settings set currency = 'RUB'")
+  })
 }
 
 export async function setOwnerPassword(password: string): Promise<void> {

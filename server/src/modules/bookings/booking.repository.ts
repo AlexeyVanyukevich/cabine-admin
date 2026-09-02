@@ -8,6 +8,8 @@ export interface BookingDetailsInput {
   guest_id: string
   price_per_night: number
   addons_snapshot: string
+  /** Snapshotted alongside the price, and never rewritten. See `003_currency`. */
+  currency: string
   deposit: number
   note: string | null
 }

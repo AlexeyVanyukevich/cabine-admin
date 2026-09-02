@@ -71,3 +71,18 @@
   color: var(--ink-faint);
   line-height: 1.4;
 }
+
+.currency {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.currency__note {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--ink-faint);
+  line-height: 1.4;
+}

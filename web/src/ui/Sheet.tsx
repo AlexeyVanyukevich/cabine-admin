@@ -5,13 +5,19 @@ interface Props {
   title: string
   onClose: () => void
   children: React.ReactNode
+  /**
+   * Pinned below the scrolling body. A button here submits a form in the body by carrying that
+   * form's id in its own `form` attribute, since the two are no longer nested.
+   */
+  footer?: React.ReactNode
 }
 
 /**
  * A modal centred in the viewport, on the phone as well as the desktop. It caps at the height of
- * the screen and scrolls its body, so a long form never pushes its own controls out of view.
+ * the screen and scrolls its body between a fixed title and a fixed footer, so a long form never
+ * pushes its own controls out of view.
  */
-export function Sheet({ title, onClose, children }: Props) {
+export function Sheet({ title, onClose, children, footer }: Props) {
   const panel = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -42,6 +48,7 @@ export function Sheet({ title, onClose, children }: Props) {
           </button>
         </header>
         <div className="sheet__body">{children}</div>
+        {footer !== undefined && <footer className="sheet__foot">{footer}</footer>}
       </div>
     </div>
   )

@@ -6,6 +6,9 @@ import { useSettings } from '../settings'
 import { formatStay } from './NewBooking'
 import { messageFor } from '../errors'
 
+/** Ties the pinned Save button to the form it submits, which is no longer its ancestor. */
+const FORM = 'booking-edit'
+
 interface Props {
   booking: Booking
   onClose: () => void
@@ -21,6 +24,8 @@ export function BookingDetails({ booking, onClose, onChanged }: Props) {
   const settings = useSettings()
 
   const cancelled = booking.status === 'cancelled'
+  /** Nothing to edit on an orphan (no record here) or a cancelled stay (nights already free). */
+  const editable = !booking.orphan && !cancelled
 
   // The currency this booking was agreed in, not the one the owner is set to today: a stay
   // goes on reading as it was sold however the setting changes afterwards.
@@ -56,9 +61,21 @@ export function BookingDetails({ booking, onClose, onChanged }: Props) {
   }
 
   return (
+    // Only the form's own button is pinned. Cancelling a booking stays in the body below: it
+    // is destructive and rarely the reason the sheet was opened, so having to scroll to it is
+    // the point rather than a cost.
     <Sheet
       title={booking.orphan ? 'Бронь без данных' : (booking.guest?.name ?? 'Бронь')}
       onClose={onClose}
+      footer={
+        editable ? (
+          <div className="actions">
+            <button className="btn btn--primary" type="submit" form={FORM} disabled={busy}>
+              {busy ? 'Сохраняем…' : 'Сохранить'}
+            </button>
+          </div>
+        ) : undefined
+      }
     >
       <p className="stay">
         {booking.house_name} · {formatStay(booking.check_in, booking.check_out)} · {booking.nights}{' '}
@@ -121,8 +138,8 @@ export function BookingDetails({ booking, onClose, onChanged }: Props) {
         </div>
       )}
 
-      {!booking.orphan && !cancelled && (
-        <form onSubmit={save}>
+      {editable && (
+        <form id={FORM} onSubmit={save}>
           {error !== undefined && (
             <p className="formerror" role="alert">
               {error}
@@ -150,12 +167,6 @@ export function BookingDetails({ booking, onClose, onChanged }: Props) {
               rows={2}
             />
           </label>
-
-          <div className="actions">
-            <button className="btn btn--primary" type="submit" disabled={busy}>
-              {busy ? 'Сохраняем…' : 'Сохранить'}
-            </button>
-          </div>
         </form>
       )}
 

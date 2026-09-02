@@ -6,6 +6,9 @@ import { money, toMinor } from '../money'
 import { useSettings } from '../settings'
 import { messageFor } from '../errors'
 
+/** Ties the pinned Save button to the form it submits, which is no longer its ancestor. */
+const FORM = 'new-booking'
+
 interface Props {
   house: House
   checkIn: string
@@ -64,13 +67,26 @@ export function NewBooking({ house, checkIn, checkOut, onCancel, onSaved }: Prop
   }
 
   return (
-    <Sheet title="Новая бронь" onClose={onCancel}>
+    <Sheet
+      title="Новая бронь"
+      onClose={onCancel}
+      footer={
+        <div className="actions">
+          <button className="btn btn--quiet" type="button" onClick={onCancel}>
+            Отмена
+          </button>
+          <button className="btn btn--primary" type="submit" form={FORM} disabled={busy}>
+            {busy ? 'Сохраняем…' : 'Сохранить'}
+          </button>
+        </div>
+      }
+    >
       <p className="stay">
         {house.name} · {formatStay(checkIn, checkOut)} · {nights}{' '}
         {nights === 1 ? 'ночь' : nights < 5 ? 'ночи' : 'ночей'}
       </p>
 
-      <form onSubmit={submit}>
+      <form id={FORM} onSubmit={submit}>
         {error !== undefined && (
           <p className="formerror" role="alert">
             {error}
@@ -183,15 +199,6 @@ export function NewBooking({ house, checkIn, checkOut, onCancel, onSaved }: Prop
               <span>{money(balance, currency)}</span>
             </div>
           )}
-        </div>
-
-        <div className="actions">
-          <button className="btn btn--quiet" type="button" onClick={onCancel}>
-            Отмена
-          </button>
-          <button className="btn btn--primary" type="submit" disabled={busy}>
-            {busy ? 'Сохраняем…' : 'Сохранить'}
-          </button>
         </div>
       </form>
     </Sheet>

@@ -66,6 +66,16 @@ test('picks free nights and books them', async ({ page }) => {
   await pickNights(page, checkIn, second)
 
   await expect(page.getByRole('dialog', { name: 'Новая бронь' })).toBeVisible()
+
+  // Pinned below the scrolling body rather than inside it, so a long form cannot carry the
+  // controls off the screen. It still submits the form, which it is no longer nested in.
+  await expect(
+    page.locator('.sheet__foot').getByRole('button', { name: 'Сохранить' }),
+  ).toBeVisible()
+  await expect(page.locator('.sheet__body').getByRole('button', { name: 'Сохранить' })).toHaveCount(
+    0,
+  )
+
   await page.getByLabel('Имя').fill('Иван')
   await page.getByLabel('Телефон').fill('+7 912 345 67 89')
   await page.getByLabel('Баня').check()

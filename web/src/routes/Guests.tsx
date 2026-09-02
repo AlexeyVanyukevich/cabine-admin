@@ -77,6 +77,9 @@ export function Guests() {
   )
 }
 
+/** Ties the pinned Save button to the form it submits, which is no longer its ancestor. */
+const FORM = 'guest-edit'
+
 function GuestSheet({ guest, onClose }: { guest: Guest; onClose: () => void }) {
   const queryClient = useQueryClient()
   const [name, setName] = useState(guest.name)
@@ -108,7 +111,17 @@ function GuestSheet({ guest, onClose }: { guest: Guest; onClose: () => void }) {
   const owed = owedByCurrency(stays.data ?? [])
 
   return (
-    <Sheet title={guest.name} onClose={onClose}>
+    <Sheet
+      title={guest.name}
+      onClose={onClose}
+      footer={
+        <div className="actions">
+          <button className="btn btn--primary" type="submit" form={FORM} disabled={save.isPending}>
+            {save.isPending ? 'Сохраняем…' : 'Сохранить'}
+          </button>
+        </div>
+      }
+    >
       <dl className="facts">
         <div className="facts__row">
           <dt>Телефон</dt>
@@ -152,6 +165,7 @@ function GuestSheet({ guest, onClose }: { guest: Guest; onClose: () => void }) {
       </ul>
 
       <form
+        id={FORM}
         onSubmit={(event) => {
           event.preventDefault()
           save.mutate()
@@ -183,12 +197,6 @@ function GuestSheet({ guest, onClose }: { guest: Guest; onClose: () => void }) {
             placeholder="Приезжает с собакой"
           />
         </label>
-
-        <div className="actions">
-          <button className="btn btn--primary" type="submit" disabled={save.isPending}>
-            {save.isPending ? 'Сохраняем…' : 'Сохранить'}
-          </button>
-        </div>
       </form>
     </Sheet>
   )

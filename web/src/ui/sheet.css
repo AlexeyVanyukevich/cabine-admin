@@ -64,6 +64,24 @@
   overflow-y: auto;
 }
 
+/*
+ * Pinned, so the controls stay where the thumb left them however long the form is. No
+ * safe-area padding: the overlay around the panel already holds that inset, and a second one
+ * here would leave the buttons floating above a gap.
+ */
+.sheet__foot {
+  flex: none;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+/* The footer supplies the spacing above itself; a margin here would double it. */
+.sheet__foot .actions {
+  margin-top: 0;
+}
+
 /* Shared form furniture for everything that lives inside a sheet. */
 .field {
   display: block;

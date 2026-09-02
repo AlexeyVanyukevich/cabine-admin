@@ -10,10 +10,8 @@ describe('money', () => {
     expect(money(65000, RUB)).toBe('650 ₽')
   })
 
-  /**
-   * The whole point of the feature: the same integer, a different symbol. Nothing converts —
-   * 65000 is 650 of whatever the booking was agreed in.
-   */
+  // The whole point of the feature: the same stored number, a different symbol. Nothing
+  // converts.
   it('renders the same amount in another currency without converting it', () => {
     expect(money(65000, BYN)).toBe('650 Br')
   })
@@ -22,8 +20,8 @@ describe('money', () => {
     expect(money(65050, RUB)).toBe('650,5 ₽')
   })
 
-  // Russian grouping regardless of the currency: the interface is in Russian, and a euro
-  // price should not suddenly read as 1,234.
+  // One grouping regardless of the currency: the interface is in one language, and changing
+  // the symbol should not change how the number itself is written.
   it('groups thousands the Russian way whatever the currency', () => {
     expect(money(123456750, EUR)).toBe('1 234 567,5 €')
   })
@@ -76,10 +74,8 @@ describe('owedByCurrency', () => {
     ).toEqual([{ currency: 'RUB', owed: 25000 }])
   })
 
-  /**
-   * The reason this function exists. A guest who stayed before the switch and after it owes
-   * two amounts, not one — adding them would invent a number in neither currency.
-   */
+  // The reason this function exists. A guest who stayed either side of a change owes two
+  // amounts, not one — adding them would invent a number in neither currency.
   it('keeps currencies apart instead of adding them together', () => {
     expect(
       owedByCurrency([
@@ -127,10 +123,8 @@ describe('currencyOf', () => {
     expect(currencyOf('BYN', offered).symbol).toBe('Br')
   })
 
-  /**
-   * A booking snapshotted in a currency later dropped from the list still has to render.
-   * «650 RUB» is unlovely; a symbol borrowed from some other currency would be a lie.
-   */
+  // A booking snapshotted in a currency later dropped from the list still has to render.
+  // Showing the bare code is unlovely; a symbol borrowed from another currency would be a lie.
   it('falls back to the code itself rather than borrow another symbol', () => {
     expect(currencyOf('SEK', offered).symbol).toBe('SEK')
   })

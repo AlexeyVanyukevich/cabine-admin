@@ -5,10 +5,10 @@ export class SettingsRepository {
   constructor(private readonly db: Kysely<Database>) {}
 
   /**
-   * The row is created by migration `003` and only ever updated, so its absence means the
-   * database was never migrated. Throwing beats falling back to a default: a settings read
-   * that silently invents roubles would put the wrong symbol on every price on the screen,
-   * and nothing would say so.
+   * The row is created by migration and only ever updated, so its absence means the database
+   * was never migrated. Throwing beats falling back to a default: a settings read that quietly
+   * invents one would put the wrong symbol on every price on the screen, and nothing would
+   * say so.
    */
   async currency(): Promise<string> {
     const row = await this.db

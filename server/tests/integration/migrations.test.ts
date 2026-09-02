@@ -93,9 +93,9 @@ describe('schema', () => {
   })
 
   /**
-   * The constraint checks the shape of the code, never which codes are allowed. Membership is
-   * enforced by the TypeBox enum at the route, from the one list in `shared/currency.ts`;
-   * pinning that list into the schema would mean a migration every time one is added.
+   * The constraint checks the shape of a code, never which codes are allowed. Membership is
+   * enforced at the route, from the one list in `shared/currency.ts`; pinning that list into
+   * the schema would mean a migration every time one is added.
    */
   it('accepts a well-formed currency code', async () => {
     await getTestDb().updateTable('settings').set({ currency: 'BYN' }).execute()

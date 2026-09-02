@@ -32,10 +32,10 @@ describe('the currency table', () => {
   )
 
   /**
-   * The load-bearing test. Every amount in this project is an integer in minor units, and
-   * both `toMinor` on the web and every stored integer assume that minor unit is a hundredth.
-   * Adding JPY (0 decimals) or KWD (3) to the table would silently make every price in the
-   * database mean something else. This fails the moment someone tries.
+   * The load-bearing test. Every amount in this project is an integer in minor units, and both
+   * the web's conversion and every stored integer assume one scale for all of them. Admitting
+   * a currency on another scale would silently make every price in the database mean something
+   * else. This fails the moment someone tries.
    */
   it.each(CURRENCIES.map((currency) => [currency.code, currency] as const))(
     '%s divides into exactly 100 minor units',
@@ -54,10 +54,8 @@ describe('isCurrencyCode', () => {
     expect(isCurrencyCode('BYN')).toBe(true)
   })
 
-  /**
-   * JPY is a real ISO 4217 code, which is the point: a shape check on the string would let it
-   * through, and it has no minor unit at all.
-   */
+  // A code can be a real currency, and well formed, and still be one this project cannot
+  // store — which is why membership is checked rather than shape.
   it.each([
     ['a real currency we do not offer', 'JPY'],
     ['something that is not a currency', 'XYZ'],

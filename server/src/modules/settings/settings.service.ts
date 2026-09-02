@@ -24,9 +24,8 @@ export class SettingsService {
   }
 
   /**
-   * The code a booking made right now should be snapshotted with. Nothing converts and
-   * nothing recomputes: changing this setting decides what the *next* price means, never
-   * what a price already agreed meant.
+   * The code a booking made right now should be snapshotted with. Nothing converts and nothing
+   * recomputes: this setting decides what the *next* price means, never what an agreed one did.
    */
   async currentCurrency(): Promise<string> {
     return this.repository.currency()

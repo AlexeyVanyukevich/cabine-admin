@@ -26,9 +26,9 @@ const draftOf = (house: House): Draft => ({
 })
 
 /**
- * Nothing is converted when this changes. The integers stay exactly as they are and start
- * reading with a different symbol, so the owner must re-enter the prices below if the numbers
- * no longer make sense — which is why the warning sits directly above them.
+ * Nothing is converted when this changes. The stored numbers stay as they are and start reading
+ * with a different symbol, so the owner must re-enter the prices below if they no longer make
+ * sense — which is why the warning sits directly above them.
  *
  * Bookings already made are not affected at all: each one carries the currency it was agreed
  * in, the same way it carries the price.

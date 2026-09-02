@@ -3,27 +3,25 @@ import { Kysely, sql } from 'kysely'
 /**
  * The currency the owner prices in.
  *
- * Two places, for one reason. `settings.currency` is what new prices mean *now*, and the
- * owner can change it. `booking_details.currency` is what a booking meant *when it was made*,
- * and nothing can change it — the same rule that already keeps `price_per_night` on the row
- * instead of read live from the house. Without the snapshot, switching to euros would relabel
- * every rouble in the history as a euro, and the owner would be looking at a debt that never
- * existed.
+ * Two places, for one reason. The setting is what a price entered now means, and the owner can
+ * change it. The column on a booking is what that booking meant when it was made, and nothing
+ * can change it — the same rule that already keeps the price on the row rather than read live
+ * from the house. Without the snapshot, changing the setting would relabel settled totals and
+ * show the owner a debt that was never agreed.
  *
- * Nothing is converted here and nothing ever will be. The backfill sets every existing row to
- * RUB because every existing row genuinely is roubles.
+ * Nothing is converted here and nothing ever will be. The backfill names the currency every
+ * existing row is already denominated in.
  *
  * The check constraints test the *shape* of a code, not which codes are allowed. Membership
- * belongs to `shared/currency.ts`, enforced at the route by a TypeBox enum: the list of
- * currencies on offer is going to grow, and pinning it into the schema would make each
- * addition a migration.
+ * belongs to `shared/currency.ts`, enforced at the route: the list on offer is going to grow,
+ * and pinning it into the schema would make each addition a migration.
  */
 const CODE_SHAPE = sql`~ '^[A-Z]{3}$'`
 
 export async function up(db: Kysely<any>): Promise<void> {
-  // No `id = 1` secret, following `owners`: a row nothing can be joined to has to be
-  // rewritten the day it needs a foreign key. The row is created here and only ever updated
-  // afterwards, so a second one cannot appear through the application.
+  // An ordinary key rather than a pinned one, following `owners`: a row nothing can be joined
+  // to has to be rewritten the day it needs a foreign key. The row is created here and only
+  // ever updated afterwards, so a second one cannot appear through the application.
   await db.schema
     .createTable('settings')
     .addColumn('id', 'uuid', (col) => col.primaryKey().defaultTo(sql`gen_random_uuid()`))

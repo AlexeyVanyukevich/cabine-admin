@@ -48,8 +48,8 @@ export function Timeline({
 }: Props) {
   const nights = eachNight(from, to)
   const now = today()
-  // Each row renders its own booking's currency: the calendar can show a stay sold in
-  // roubles next to one sold in euros, and neither may borrow the other's symbol.
+  // Each row renders its own booking's currency: the calendar can show stays sold either side
+  // of a change, and neither may borrow the other's symbol.
   const currencies = useSettings().data?.currencies
   const todayRow = useRef<HTMLDivElement>(null)
 

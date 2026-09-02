@@ -21,8 +21,8 @@ export function BookingDetails({ booking, onClose, onChanged }: Props) {
 
   const cancelled = booking.status === 'cancelled'
 
-  // The currency this booking was agreed in, not the one the owner is set to today.
-  // A stay sold in roubles keeps reading in roubles after a switch to euros.
+  // The currency this booking was agreed in, not the one the owner is set to today: a stay
+  // goes on reading as it was sold however the setting changes afterwards.
   const currency = currencyOf(booking.currency, settings.data?.currencies)
 
   async function save(event: FormEvent) {

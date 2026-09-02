@@ -158,10 +158,9 @@ describe('POST /api/bookings', () => {
 })
 
 /**
- * The same rule that keeps `price_per_night` on the row rather than read live from the house:
- * a booking means what it meant when it was agreed. Without this, switching the setting to
- * euros would relabel every rouble in the history and show the owner a debt that never
- * existed.
+ * The same rule that keeps `price_per_night` on the row rather than read live from the house: a
+ * booking means what it meant when it was agreed. Without this, changing the setting would
+ * relabel settled totals and show the owner a debt that never existed.
  */
 describe('the currency a booking was agreed in', () => {
   const setCurrency = (currency: string) =>

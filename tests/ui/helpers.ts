@@ -56,7 +56,7 @@ export async function resetAppDb(): Promise<void> {
       'truncate table booking_details, guests, house_addon_prices, houses, sessions, owners restart identity cascade',
     )
     // Not truncated: the settings row is seeded by the migration and only ever updated. It is
-    // put back to roubles so a spec that switches the currency cannot leak into the next one.
+    // put back to the default so a spec that changes it cannot leak into the next one.
     await client.query("update settings set currency = 'RUB'")
   })
 }

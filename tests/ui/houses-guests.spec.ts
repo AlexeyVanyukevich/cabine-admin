@@ -131,15 +131,14 @@ test.describe('Валюта', () => {
 
     await page.getByLabel('Валюта').selectOption('BYN')
 
-    // The same 300. Nothing is converted, so the owner is told to check the prices.
+    // The same number. Nothing is converted, so the owner is told to check the prices.
     await expect(page.getByLabel('Цена за ночь, Br')).toHaveValue('300')
     await expect(page.getByText('Суммы не пересчитываются')).toBeVisible()
   })
 
   /**
-   * The invariant the whole design turns on: a stay sold in roubles is still owed in roubles
-   * after the owner starts pricing in something else. Anything else shows a debt that was
-   * never agreed.
+   * The invariant the whole design turns on: a stay is still owed in what it was sold in after
+   * the owner starts pricing in something else. Anything else shows a debt never agreed.
    */
   test('leaves a booking in the currency it was sold in', async ({ page }) => {
     const houseId = await seedHouse(HOUSE)

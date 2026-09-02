@@ -5,15 +5,15 @@
  */
 
 /**
- * Minor units to something a person reads: 65000 → «650 ₽».
+ * Minor units to something a person reads.
  *
- * The symbol is passed in rather than baked in, and nothing here converts: 65000 is 650 of
- * whichever currency it is handed. A booking supplies the currency it was agreed in, so a
- * settled total keeps reading in roubles after the owner switches to euros.
+ * The symbol is passed in rather than baked in, and nothing here converts: an amount is the
+ * same number in whichever currency it is handed. A booking supplies the currency it was
+ * agreed in, so a settled total goes on reading as it was sold after the setting changes.
  *
- * The number is always grouped `ru-RU` — the interface is Russian, and only the symbol
- * changes with the currency. Every currency on offer divides into 100 minor units, which the
- * server's `currency.ts` test enforces, so two decimals is right for all of them.
+ * The number is always grouped the same way — the interface is in one language, and only the
+ * symbol changes with the currency. Every currency on offer shares one minor-unit scale, which
+ * the server's currency test enforces, so the fraction handling here fits all of them.
  */
 export function money(minor: number | null, currency: { symbol: string }): string {
   if (minor === null) return '—'
@@ -38,9 +38,9 @@ export function toMajor(minor: number | null): string {
 /**
  * How to render a currency code, from the list the server sent.
  *
- * Falls back to the code itself — «650 RUB» rather than a symbol belonging to some other
- * currency. That covers both the moment before the settings request lands and a booking
- * snapshotted in a currency since dropped from the list.
+ * Falls back to the code itself rather than a symbol belonging to some other currency. That
+ * covers both the moment before the settings request lands and a booking snapshotted in a
+ * currency since dropped from the list.
  */
 export function currencyOf(
   code: string | null,
@@ -53,10 +53,9 @@ export function currencyOf(
 /**
  * What a guest still owes, one figure per currency they owe it in.
  *
- * Amounts in different currencies must never be added: a guest who stayed before the owner
- * switched and again after it owes two sums, and a single number would be neither of them.
- * An overpaid stay is floored at zero rather than allowed to offset a debt, which is what the
- * screen did before currencies existed.
+ * Amounts in different currencies must never be added: a guest who stayed either side of a
+ * change owes two sums, and a single number would be neither of them. An overpaid stay is
+ * floored at zero rather than allowed to offset a debt, as the screen did before currencies.
  */
 export function owedByCurrency(
   stays: Array<{ balance: number | null; currency: string | null }>,

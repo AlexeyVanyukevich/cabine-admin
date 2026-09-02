@@ -27,9 +27,9 @@ describe('GET /api/settings', () => {
   })
 
   /**
-   * The browser keeps no copy of the currency table — this is where it gets one. A second
-   * copy in the web workspace would drift, and nothing would notice until a price rendered
-   * with the wrong symbol.
+   * The browser keeps no copy of the currency table — this is where it gets one. A second copy
+   * in the web workspace would drift, and nothing would notice until a price rendered with the
+   * wrong symbol.
    */
   it('offers the currencies the owner may choose from', async () => {
     const response = await app.inject({ method: 'GET', url: '/api/settings', cookies })
@@ -74,9 +74,9 @@ describe('PATCH /api/settings', () => {
   })
 
   /**
-   * JPY is the case that matters: a real ISO 4217 code, so any check on the shape of the
-   * string lets it through, and it has no minor unit. Accepting it would not add a currency —
-   * it would reinterpret every integer already in the database.
+   * The case that matters is a real currency code this project does not offer: any check on the
+   * shape of the string lets it through. Accepting one would not add a currency — it would
+   * reinterpret every integer already in the database.
    */
   it.each([
     ['a currency with no minor unit', 'JPY'],

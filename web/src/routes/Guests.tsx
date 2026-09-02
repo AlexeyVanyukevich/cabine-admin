@@ -102,8 +102,8 @@ function GuestSheet({ guest, onClose }: { guest: Guest; onClose: () => void }) {
       setError(cause instanceof ApiError ? cause.message : 'Не удалось сохранить'),
   })
 
-  // One figure per currency. A guest who stayed before the owner switched and again after
-  // owes two amounts; adding them would invent a number in neither currency.
+  // One figure per currency. A guest who stayed either side of a change owes two amounts;
+  // adding them would invent a number in neither currency.
   const currencies = useSettings().data?.currencies
   const owed = owedByCurrency(stays.data ?? [])
 

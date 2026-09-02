@@ -3,11 +3,9 @@
  * workspace deliberately keeps no copy, because a second copy of a table like this drifts and
  * nothing notices until a price renders with the wrong symbol.
  *
- * Every entry must divide into exactly 100 minor units. That is not a coincidence to be
- * relaxed later: every stored amount is an integer of hundredths, and `toMinor` on the web
- * multiplies by 100 on the way in. Admitting JPY, which has no minor unit, would not add a
- * currency — it would silently reinterpret every integer already in the database. A unit test
- * asserts the property against `Intl` for each entry, so adding a bad one fails the suite.
+ * Every entry must divide into the same number of minor units, because stored amounts carry no
+ * scale of their own. Admitting one that does not would reinterpret every integer already in
+ * the database rather than add a currency. A unit test asserts the property for each entry.
  */
 export interface Currency {
   /** ISO 4217 alpha-3. */
@@ -30,10 +28,7 @@ export const DEFAULT_CURRENCY_CODE: CurrencyCode = 'RUB'
 
 export const CURRENCY_CODES: readonly CurrencyCode[] = CURRENCIES.map((currency) => currency.code)
 
-/**
- * Membership, not shape. A `^[A-Z]{3}$` test would accept JPY and every other code we cannot
- * store, which is exactly the failure this guards.
- */
+/** Membership, not shape: a well-formed code is not necessarily one we can store. */
 export function isCurrencyCode(value: string): value is CurrencyCode {
   return CURRENCIES.some((currency) => currency.code === value)
 }

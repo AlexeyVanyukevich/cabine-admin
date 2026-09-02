@@ -18,6 +18,15 @@ export class ValidationError extends AppError {
   readonly code = 'validation_error'
 }
 
+/**
+ * Carries its own code because the interface has something specific to say about it: this is
+ * the one field the owner fills in freely, so it is the one that can be wrong on its own.
+ */
+export class InvalidPhoneError extends AppError {
+  readonly statusCode = 400
+  readonly code = 'invalid_phone'
+}
+
 export class NotFoundError extends AppError {
   readonly statusCode = 404
   readonly code = 'not_found'

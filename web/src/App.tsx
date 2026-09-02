@@ -5,6 +5,7 @@ import { Login } from './routes/Login'
 import { Calendar } from './routes/Calendar'
 import { Guests } from './routes/Guests'
 import { Houses } from './routes/Houses'
+import { messageFor } from './errors'
 
 /**
  * The session is checked by asking the server, never by reading a cookie: the cookie is
@@ -20,7 +21,7 @@ function RequireSession({ children }: { children: React.ReactNode }) {
 
   if (session.isPending) return <Waiting />
   if (session.error instanceof NotSignedIn) return <Navigate to="/login" replace />
-  if (session.error) return <Trouble message={session.error.message} />
+  if (session.error) return <Trouble message={messageFor(session.error)} />
   return <>{children}</>
 }
 

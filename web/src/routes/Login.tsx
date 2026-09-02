@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { api, ApiError } from '../api'
+import { messageFor } from '../errors'
 import './login.css'
 
 export function Login() {
@@ -22,9 +23,7 @@ export function Login() {
       setError(
         cause instanceof ApiError && cause.status === 401
           ? 'Неверный пароль'
-          : cause instanceof ApiError
-            ? cause.message
-            : 'Не удалось войти',
+          : messageFor(cause, 'Не удалось войти'),
       )
     } finally {
       setBusy(false)

@@ -1,5 +1,5 @@
 import { parsePhoneNumberFromString } from 'libphonenumber-js'
-import { ValidationError } from '../../shared/errors.js'
+import { InvalidPhoneError } from '../../shared/errors.js'
 
 /**
  * The phone is the guest's identity, so every spelling of one number must reduce to a single
@@ -25,7 +25,7 @@ export function normalisePhone(raw: string): string {
   // has not learnt yet is well-shaped and merely unvouched-for. Refusing to save the booking
   // at all is the worse of the two errors.
   if (parsed === undefined || !parsed.isPossible()) {
-    throw new ValidationError(`Not a phone number: ${JSON.stringify(raw)}`)
+    throw new InvalidPhoneError(`Not a phone number: ${JSON.stringify(raw)}`)
   }
   return parsed.number
 }

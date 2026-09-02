@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react'
-import { api, ApiError, type Booking } from '../api'
+import { api, type Booking } from '../api'
 import { Sheet } from '../ui/Sheet'
 import { currencyOf, money, toMajor, toMinor } from '../money'
 import { useSettings } from '../settings'
 import { formatStay } from './NewBooking'
+import { messageFor } from '../errors'
 
 interface Props {
   booking: Booking
@@ -36,7 +37,7 @@ export function BookingDetails({ booking, onClose, onChanged }: Props) {
       })
       onChanged()
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : 'Не удалось сохранить')
+      setError(messageFor(cause, 'Не удалось сохранить'))
     } finally {
       setBusy(false)
     }
@@ -49,7 +50,7 @@ export function BookingDetails({ booking, onClose, onChanged }: Props) {
       await api.post(`/api/bookings/${booking.id}/cancel`)
       onChanged()
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : 'Не удалось отменить бронь')
+      setError(messageFor(cause, 'Не удалось отменить бронь'))
       setBusy(false)
     }
   }

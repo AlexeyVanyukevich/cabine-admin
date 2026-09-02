@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api, ApiError, type Booking, type Guest } from '../api'
+import { api, type Booking, type Guest } from '../api'
 import { Screen } from '../ui/Screen'
 import { Sheet } from '../ui/Sheet'
 import { currencyOf, money, owedByCurrency } from '../money'
 import { useSettings } from '../settings'
 import { formatStay } from '../booking/NewBooking'
+import { messageFor } from '../errors'
 import './guests.css'
 
 export function Guests() {
@@ -42,7 +43,7 @@ export function Guests() {
 
       {guests.error && (
         <div className="notice notice--bad" role="alert">
-          <p>{guests.error.message}</p>
+          <p>{messageFor(guests.error)}</p>
         </div>
       )}
 
@@ -98,8 +99,7 @@ function GuestSheet({ guest, onClose }: { guest: Guest; onClose: () => void }) {
       await queryClient.invalidateQueries({ queryKey: ['guests'] })
       onClose()
     },
-    onError: (cause) =>
-      setError(cause instanceof ApiError ? cause.message : 'Не удалось сохранить'),
+    onError: (cause) => setError(messageFor(cause, 'Не удалось сохранить')),
   })
 
   // One figure per currency. A guest who stayed either side of a change owes two amounts;

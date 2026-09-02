@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react'
-import { api, ApiError, type House } from '../api'
+import { api, type House } from '../api'
 import { Sheet } from '../ui/Sheet'
 import { nightsBetween } from '../calendar/nights'
 import { money, toMinor } from '../money'
 import { useSettings } from '../settings'
+import { messageFor } from '../errors'
 
 interface Props {
   house: House
@@ -56,7 +57,7 @@ export function NewBooking({ house, checkIn, checkOut, onCancel, onSaved }: Prop
       })
       onSaved()
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : 'Не удалось сохранить бронь')
+      setError(messageFor(cause, 'Не удалось сохранить бронь'))
     } finally {
       setBusy(false)
     }

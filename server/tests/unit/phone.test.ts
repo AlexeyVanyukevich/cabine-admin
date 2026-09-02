@@ -40,9 +40,8 @@ describe('normalisePhone', () => {
     expect(normalisePhone('+44 7700 900123')).toBe('+447700900123')
   })
 
-  // A trunk prefix is not a country code. `8 029 …` and `8 912 …` are written identically and
-  // belong to different countries, so the number is refused rather than assigned to whichever
-  // one the server happens to sit in.
+  // A trunk prefix is not a country code: neighbouring countries write theirs identically, so
+  // such a number is refused rather than assigned to whichever one the server happens to sit in.
   it.each(['8 029 123 45 67', '8 912 345 67 89', '29 123 45 67'])(
     'refuses %j, which names no country',
     (raw) => {

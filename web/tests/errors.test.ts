@@ -8,7 +8,8 @@ describe('messageFor', () => {
   it('answers in the language of the interface', () => {
     const said = messageFor(new ApiError('invalid_phone', 400, 'Not a phone number: "8029…"'))
     expect(said).toMatch(CYRILLIC)
-    expect(said).toContain('код')
+    // Names the field it is about, so the owner knows which one to look at.
+    expect(said).toContain('номер')
   })
 
   // The point of the mapping: a server message is written for whoever maintains the system,

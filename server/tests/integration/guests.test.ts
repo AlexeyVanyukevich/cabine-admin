@@ -24,7 +24,7 @@ const create = (payload: Record<string, unknown>) =>
 
 describe('POST /api/guests', () => {
   it('stores the phone normalised, whatever spelling arrived', async () => {
-    const response = await create({ name: 'Иван', phone: '+7 (912) 345-67-89' })
+    const response = await create({ name: 'Иван', phone: '8 912 345 67 89' })
     expect(response.statusCode).toBe(201)
     expect(response.json()).toMatchObject({ name: 'Иван', phone: '+79123456789' })
   })
@@ -33,7 +33,7 @@ describe('POST /api/guests', () => {
   // typed the number differently the second time.
   it('returns the existing guest when the same number arrives spelled differently', async () => {
     const first = await create({ name: 'Иван', phone: '+7 912 345 67 89' })
-    const second = await create({ name: 'Иван', phone: '79123456789' })
+    const second = await create({ name: 'Иван', phone: '89123456789' })
 
     expect(second.statusCode).toBe(200)
     expect(second.json().id).toBe(first.json().id)
@@ -80,7 +80,7 @@ describe('GET /api/guests', () => {
 
     const response = await app.inject({
       method: 'GET',
-      url: `/api/guests?phone=${encodeURIComponent('+7 (912) 345-67-89')}`,
+      url: `/api/guests?phone=${encodeURIComponent('8 912 345 67 89')}`,
       cookies,
     })
     expect(response.json()).toHaveLength(1)

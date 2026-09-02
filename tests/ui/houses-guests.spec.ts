@@ -183,8 +183,8 @@ test.describe('Гости', () => {
     await page.getByRole('link', { name: 'Гости' }).click()
     await expect(page.getByText('Иван Петров')).toBeVisible()
 
-    // Stored as +79123456789; searched for with the punctuation a guest would write.
-    await page.getByPlaceholder('Поиск по телефону').fill('+7 (912) 345-67-89')
+    // Stored as +79123456789; searched for the way a guest would write it.
+    await page.getByPlaceholder('Поиск по телефону').fill('8 912 345 67 89')
     await expect(page.getByText('Иван Петров')).toBeVisible()
     await expect(page.getByText('+79123456789')).toBeVisible()
   })

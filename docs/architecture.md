@@ -369,10 +369,18 @@ reads the single row; finding two is a loud error, and that error is exactly the
 is time to add an identifier — deliberately left open, because slice 2 replaces this password
 with Telegram and a `telegram_user_id` is likelier than a username.
 
-The cookie is `httpOnly`, `SameSite=Lax`, `Secure` in production, 30 days by default with
-sliding renewal. Renewal writes at most once an hour rather than on every request: a write on
-every read turns a read-only page into write traffic. The tool is opened from a phone every few
-days, so a weekly password prompt would protect nothing and annoy reliably.
+The cookie is `httpOnly`, `SameSite=Lax`, `Secure` in production, and carries a fixed `Max-Age`
+of `SESSION_TTL_DAYS` days (30 by default), stamped once at login and never reissued. The owner
+is asked to sign in again exactly that many days after their **last login**, not their last use —
+the browser stops sending the cookie once it expires, regardless of how often the app was opened
+in between.
+
+`sessions.expires_at` does slide forward server-side on each `resolve()` (written at most once an
+hour rather than on every request, the same lazy-write shape as the engine's `last_used_at`), but
+this has no effect the owner can see: the cookie is already gone from the browser by the time the
+extended server-side expiry would matter. An iOS home-screen install feels this most directly — it
+gets its own storage jar, separate from Safari's, so adding it means signing in once more inside
+it, and `SESSION_TTL_DAYS` is then the number that governs how often it asks again.
 
 The SPA never reads the cookie to decide whether it is signed in — it asks `GET /api/me`. The
 cookie is `httpOnly`, and a client-side guess would eventually disagree with the server that

@@ -127,6 +127,13 @@ which for the calendar is the difference between "we cannot tell you" and "every
 | Anything else                                                                                                               | `502`, naming the engine, and an error log                        |
 | No answer at all — refused, DNS, or our timeout                                                                             | `503 engine_unreachable` and an error log                         |
 
+A server message is never shown to the owner. The interface is Russian and the server answers in
+English — its messages are for the log and the test suite, and its vocabulary is the error code.
+`web/src/errors.ts` maps a code to the sentence the owner reads, falling back to what the screen
+was attempting rather than to the server's text, so a message written for whoever maintains the
+system cannot surface mid-booking. That fallback is what also covers the two sources nobody
+translated: schema messages from TypeBox and anything forwarded from the engine.
+
 The owner-facing / not-owner-facing split is the point: it decides whether the interface shows
 an explanation or an apology. A defect here is never dressed up as the owner's mistake.
 
@@ -323,10 +330,21 @@ dangerous.
 
 ## 6. Guests
 
-The phone is normalised and unique; it **is** the guest's identity. `8 912 …` and `+7 912 …`
-must reduce to one value, or the same person accumulates two histories and the owner sees
-neither in full. Only the Russian leading `8` is rewritten — everything else keeps the country
-code it was given.
+The phone is normalised to E.164 and unique; it **is** the guest's identity. Every spelling of
+one number must reduce to a single value, or the same person accumulates two histories and the
+owner sees neither in full.
+
+Parsing is `libphonenumber-js`, in `server/src/modules/guests/phone.ts`, not hand-written rules:
+a domestic number and a foreign one typed without a plus cannot be told apart by inspection, and
+the ways a hand-written rule gets that wrong are silent — a mangled number is a guest who can
+never be found again. A number is read as domestic-home first, then as the neighbour sharing the
+trunk prefix, then as a bare country code; the first valid reading wins. Where both countries
+could claim a number, the home one is taken, which arises only on service ranges a guest is not
+reached on.
+
+Acceptance is by **possibility, not validity**: the library's data trails the operators, so a
+number in a range it has not yet learnt is well-shaped and merely unvouched-for, and refusing to
+save the booking is the worse of the two errors.
 
 History is `booking_details` by `guest_id`, joined with dates from the engine one booking at a
 time, newest first. A guest has a handful of stays, not a page of them. There is no history
@@ -426,6 +444,12 @@ response is worse than the truth.
 `/` calendar · `/guests` · `/houses` (Дома — prices, add-ons, check-out time) · `/login`.
 Anything else redirects to `/`. Unknown server paths fall through to `index.html`, so a
 client-side route survives a reload.
+
+Every signed-in screen shares one frame — `web/src/ui/Screen.tsx`, with its layout beside it —
+and the frame owns the gap under its own title bar, so a screen cannot forget to leave one.
+Forms live in `Sheet`, whose title and footer are pinned either side of a scrolling body: a long
+form must never carry its own controls off the bottom of a phone. A pinned button reaches the
+form it submits through the `form` attribute, since the two are no longer nested.
 
 ---
 

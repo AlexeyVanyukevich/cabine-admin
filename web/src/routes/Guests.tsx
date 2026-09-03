@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api, ApiError, type Booking, type Guest } from '../api'
+import { api, type Booking, type Guest } from '../api'
 import { Screen } from '../ui/Screen'
 import { Sheet } from '../ui/Sheet'
 import { currencyOf, money, owedByCurrency } from '../money'
 import { useSettings } from '../settings'
 import { formatStay } from '../booking/NewBooking'
+import { messageFor } from '../errors'
 import './guests.css'
 
 export function Guests() {
@@ -42,7 +43,7 @@ export function Guests() {
 
       {guests.error && (
         <div className="notice notice--bad" role="alert">
-          <p>{guests.error.message}</p>
+          <p>{messageFor(guests.error)}</p>
         </div>
       )}
 
@@ -76,6 +77,9 @@ export function Guests() {
   )
 }
 
+/** Ties the pinned Save button to the form it submits, which is no longer its ancestor. */
+const FORM = 'guest-edit'
+
 function GuestSheet({ guest, onClose }: { guest: Guest; onClose: () => void }) {
   const queryClient = useQueryClient()
   const [name, setName] = useState(guest.name)
@@ -98,8 +102,7 @@ function GuestSheet({ guest, onClose }: { guest: Guest; onClose: () => void }) {
       await queryClient.invalidateQueries({ queryKey: ['guests'] })
       onClose()
     },
-    onError: (cause) =>
-      setError(cause instanceof ApiError ? cause.message : 'Не удалось сохранить'),
+    onError: (cause) => setError(messageFor(cause, 'Не удалось сохранить')),
   })
 
   // One figure per currency. A guest who stayed either side of a change owes two amounts;
@@ -108,7 +111,17 @@ function GuestSheet({ guest, onClose }: { guest: Guest; onClose: () => void }) {
   const owed = owedByCurrency(stays.data ?? [])
 
   return (
-    <Sheet title={guest.name} onClose={onClose}>
+    <Sheet
+      title={guest.name}
+      onClose={onClose}
+      footer={
+        <div className="actions">
+          <button className="btn btn--primary" type="submit" form={FORM} disabled={save.isPending}>
+            {save.isPending ? 'Сохраняем…' : 'Сохранить'}
+          </button>
+        </div>
+      }
+    >
       <dl className="facts">
         <div className="facts__row">
           <dt>Телефон</dt>
@@ -152,6 +165,7 @@ function GuestSheet({ guest, onClose }: { guest: Guest; onClose: () => void }) {
       </ul>
 
       <form
+        id={FORM}
         onSubmit={(event) => {
           event.preventDefault()
           save.mutate()
@@ -183,12 +197,6 @@ function GuestSheet({ guest, onClose }: { guest: Guest; onClose: () => void }) {
             placeholder="Приезжает с собакой"
           />
         </label>
-
-        <div className="actions">
-          <button className="btn btn--primary" type="submit" disabled={save.isPending}>
-            {save.isPending ? 'Сохраняем…' : 'Сохранить'}
-          </button>
-        </div>
       </form>
     </Sheet>
   )

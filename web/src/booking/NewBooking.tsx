@@ -1,9 +1,13 @@
 import { useState, type FormEvent } from 'react'
-import { api, ApiError, type House } from '../api'
+import { api, type House } from '../api'
 import { Sheet } from '../ui/Sheet'
 import { nightsBetween } from '../calendar/nights'
 import { money, toMinor } from '../money'
 import { useSettings } from '../settings'
+import { messageFor } from '../errors'
+
+/** Ties the pinned Save button to the form it submits, which is no longer its ancestor. */
+const FORM = 'new-booking'
 
 interface Props {
   house: House
@@ -56,20 +60,33 @@ export function NewBooking({ house, checkIn, checkOut, onCancel, onSaved }: Prop
       })
       onSaved()
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : 'Не удалось сохранить бронь')
+      setError(messageFor(cause, 'Не удалось сохранить бронь'))
     } finally {
       setBusy(false)
     }
   }
 
   return (
-    <Sheet title="Новая бронь" onClose={onCancel}>
+    <Sheet
+      title="Новая бронь"
+      onClose={onCancel}
+      footer={
+        <div className="actions">
+          <button className="btn btn--quiet" type="button" onClick={onCancel}>
+            Отмена
+          </button>
+          <button className="btn btn--primary" type="submit" form={FORM} disabled={busy}>
+            {busy ? 'Сохраняем…' : 'Сохранить'}
+          </button>
+        </div>
+      }
+    >
       <p className="stay">
         {house.name} · {formatStay(checkIn, checkOut)} · {nights}{' '}
         {nights === 1 ? 'ночь' : nights < 5 ? 'ночи' : 'ночей'}
       </p>
 
-      <form onSubmit={submit}>
+      <form id={FORM} onSubmit={submit}>
         {error !== undefined && (
           <p className="formerror" role="alert">
             {error}
@@ -96,7 +113,7 @@ export function NewBooking({ house, checkIn, checkOut, onCancel, onSaved }: Prop
             type="tel"
             inputMode="tel"
             autoComplete="tel"
-            placeholder="+7 912 345 67 89"
+            placeholder="+375 29 123 45 67"
             required
           />
         </label>
@@ -182,15 +199,6 @@ export function NewBooking({ house, checkIn, checkOut, onCancel, onSaved }: Prop
               <span>{money(balance, currency)}</span>
             </div>
           )}
-        </div>
-
-        <div className="actions">
-          <button className="btn btn--quiet" type="button" onClick={onCancel}>
-            Отмена
-          </button>
-          <button className="btn btn--primary" type="submit" disabled={busy}>
-            {busy ? 'Сохраняем…' : 'Сохранить'}
-          </button>
         </div>
       </form>
     </Sheet>

@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router'
-import { api, ApiError, type Currency, type House, type Settings } from '../api'
+import { api, type Currency, type House, type Settings } from '../api'
 import { Screen } from '../ui/Screen'
 import { money, toMajor, toMinor } from '../money'
 import { settingsKey, useSettings } from '../settings'
+import { messageFor } from '../errors'
 import './houses.css'
 
 interface Draft {
@@ -45,8 +46,7 @@ function CurrencyPicker() {
       queryClient.setQueryData(settingsKey, updated)
       await queryClient.invalidateQueries({ queryKey: ['calendar'] })
     },
-    onError: (cause) =>
-      setError(cause instanceof ApiError ? cause.message : 'Не удалось сменить валюту'),
+    onError: (cause) => setError(messageFor(cause, 'Не удалось сменить валюту')),
   })
 
   if (settings.data === undefined) return null
@@ -104,7 +104,7 @@ export function Houses() {
       {houses.error && (
         <div className="notice notice--bad" role="alert">
           <p className="notice__title">Не удалось загрузить дома</p>
-          <p>{houses.error.message}</p>
+          <p>{messageFor(houses.error)}</p>
         </div>
       )}
 
@@ -165,8 +165,7 @@ function HouseCard({ house }: { house: House }) {
       await queryClient.invalidateQueries({ queryKey: ['houses'] })
       await queryClient.invalidateQueries({ queryKey: ['calendar'] })
     },
-    onError: (cause) =>
-      setError(cause instanceof ApiError ? cause.message : 'Не удалось сохранить'),
+    onError: (cause) => setError(messageFor(cause, 'Не удалось сохранить')),
   })
 
   function submit(event: FormEvent) {

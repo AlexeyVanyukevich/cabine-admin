@@ -7,6 +7,7 @@ import { useSelection } from '../calendar/useSelection'
 import { monthBounds, monthName, shiftMonth, today } from '../calendar/nights'
 import { NewBooking } from '../booking/NewBooking'
 import { BookingDetails } from '../booking/BookingDetails'
+import { messageFor } from '../errors'
 import '../booking/booking.css'
 import './calendar.css'
 
@@ -80,7 +81,7 @@ export function Calendar() {
           // that is the one mistake here that costs money.
           <div className="notice notice--bad" role="alert">
             <p className="notice__title">Движок недоступен</p>
-            <p>{calendar.error.message}</p>
+            <p>{messageFor(calendar.error)}</p>
             <button type="button" onClick={() => void calendar.refetch()}>
               Обновить
             </button>

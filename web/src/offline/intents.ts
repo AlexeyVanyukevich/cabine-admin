@@ -62,5 +62,6 @@ export function editIntent(intent: Intent, payload: CreatePayload): Intent {
   }
   // Back to pending with the error cleared: the owner has changed what is being asked, so the
   // previous refusal no longer describes it.
-  return { ...intent, payload, state: 'pending', lastError: undefined }
+  const { lastError: _, ...rest } = intent
+  return { ...rest, payload, state: 'pending' }
 }

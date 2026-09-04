@@ -62,11 +62,16 @@ function bookingFor(intent: Intent, house: House | undefined): OverlayBooking {
 }
 
 export function applyIntents(view: CalendarView, intents: Intent[], houses: House[]): OverlayView {
-  if (intents.length === 0) return view
+  // Both early returns hand back fresh `houses`/`bookings` arrays rather than the caller's own,
+  // so a screen can treat the result the same way regardless of whether anything was queued —
+  // never a container it must remember not to sort or splice in place.
+  if (intents.length === 0) return { ...view, houses: [...view.houses], bookings: [...view.bookings] }
 
   const rendered = view.houses.map((house) => house.id)
   const relevant = intents.filter((intent) => rendered.includes(intent.payload.house_id))
-  if (relevant.length === 0) return view
+  if (relevant.length === 0) {
+    return { ...view, houses: [...view.houses], bookings: [...view.bookings] }
+  }
 
   // Every night any queued booking covers, per house. A conflicted intent counts too: until
   // the owner resolves it they still intend to hold those nights, and a night shown free that

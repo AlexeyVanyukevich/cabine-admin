@@ -17,6 +17,7 @@
 - **An unreachable engine renders an error, never an empty calendar.** A stale grid may render *only* under a staleness stamp; an empty grid never renders.
 - **Money is integer minor units.** No float anywhere near a total.
 - **Server modules are `NodeNext`:** relative imports carry `.js` even in a `.ts` file. The web workspace does not.
+- **`tsconfig.base.json` sets `exactOptionalPropertyTypes: true`.** An optional property is omitted, never assigned `undefined` — `{ ...intent, lastError: undefined }` does not compile. Build the object without the key instead.
 - **The TypeBox package is `typebox`,** not `@sinclair/typebox`.
 - **Every request body is TypeBox with `additionalProperties: false`.** A new field must be added to the schema explicitly or it is rejected.
 - **Errors keep the shape `{ error, message, details? }`.**

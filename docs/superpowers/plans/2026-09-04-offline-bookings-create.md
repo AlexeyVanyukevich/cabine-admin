@@ -656,7 +656,15 @@ function pending(payload: CreatePayload = PAYLOAD): Intent {
 
 describe('applyIntents', () => {
   it('returns the view untouched when nothing is queued', () => {
-    expect(applyIntents(VIEW, [], HOUSES)).toEqual(VIEW)
+    // Compared against an independent clone, not against VIEW itself: the function used to
+    // hand back the very object it was given, so `toEqual(VIEW)` compared it to itself and
+    // would have passed even if the body had mutated it in place.
+    const before = structuredClone(VIEW)
+    const result = applyIntents(VIEW, [], HOUSES)
+
+    expect(result).toEqual(before)
+    expect(VIEW).toEqual(before)
+    expect(result.bookings).not.toBe(VIEW.bookings)
   })
 
   it('shows a queued booking on the calendar', () => {
@@ -748,7 +756,11 @@ describe('applyIntents', () => {
   it('ignores an intent for a house not in this view', () => {
     // A month the owner has paged away from, or a house since deleted.
     const elsewhere = pending({ ...PAYLOAD, house_id: 'ffffffff-ffff-4fff-8fff-ffffffffffff' })
-    expect(applyIntents(VIEW, [elsewhere], HOUSES)).toEqual(VIEW)
+    const before = structuredClone(VIEW)
+    const result = applyIntents(VIEW, [elsewhere], HOUSES)
+
+    expect(result).toEqual(before)
+    expect(VIEW).toEqual(before)
   })
 
   it('ignores nights that fall outside the rendered window', () => {
@@ -835,11 +847,21 @@ function bookingFor(intent: Intent, house: House | undefined): OverlayBooking {
 }
 
 export function applyIntents(view: CalendarView, intents: Intent[], houses: House[]): OverlayView {
-  if (intents.length === 0) return view
+  // Fresh array containers even when nothing applies, so both paths behave the same way. A
+  // caller that sometimes gets the cache's own arrays and sometimes a new pair cannot know
+  // whether sorting the result in place will corrupt the calendar it reads engine truth from.
+  // The leaf objects stay shared; nothing here mutates them.
+  const unchanged = (): OverlayView => ({
+    ...view,
+    houses: [...view.houses],
+    bookings: [...view.bookings],
+  })
+
+  if (intents.length === 0) return unchanged()
 
   const rendered = view.houses.map((house) => house.id)
   const relevant = intents.filter((intent) => rendered.includes(intent.payload.house_id))
-  if (relevant.length === 0) return view
+  if (relevant.length === 0) return unchanged()
 
   // Every night any queued booking covers, per house. A conflicted intent counts too: until
   // the owner resolves it they still intend to hold those nights, and a night shown free that

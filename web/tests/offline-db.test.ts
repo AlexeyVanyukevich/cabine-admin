@@ -1,5 +1,6 @@
 import 'fake-indexeddb/auto'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { IDBFactory } from 'fake-indexeddb'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { allIntents, dropIntent, putCache, putIntent, readCache, resetForTests } from '../src/offline/db'
 import type { Intent } from '../src/offline/intents'
 
@@ -69,5 +70,65 @@ describe('the intent store', () => {
     await putIntent(INTENT)
     await dropIntent(INTENT.id)
     expect(await allIntents()).toEqual([])
+  })
+
+  it('returns intents in capture order, which is the order sync replays them in', async () => {
+    // Ids sort the opposite way to capturedAt, and none of the three is written in either
+    // order — so a dropped `.sort()`, or one that sorts by id instead of capturedAt, fails
+    // this assertion instead of passing it by coincidence.
+    const earliest: Intent = { ...INTENT, id: 'cccccccc-1111-4111-8111-cccccccccccc', capturedAt: '2026-09-01T00:00:00.000Z' }
+    const middle: Intent = { ...INTENT, id: 'bbbbbbbb-1111-4111-8111-bbbbbbbbbbbb', capturedAt: '2026-09-02T00:00:00.000Z' }
+    const latest: Intent = { ...INTENT, id: 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', capturedAt: '2026-09-03T00:00:00.000Z' }
+
+    await putIntent(middle)
+    await putIntent(latest)
+    await putIntent(earliest)
+
+    expect(await allIntents()).toEqual([earliest, middle, latest])
+  })
+})
+
+describe('recovering from a failed open', () => {
+  it('retries on the next call instead of staying broken for the life of the page', async () => {
+    // A private factory, swapped in only for this test: no connection any other test already
+    // opened can block what comes next, the way a leaked connection against the shared
+    // `indexedDB` would.
+    const realIndexedDB = indexedDB
+    const isolated = new IDBFactory()
+    globalThis.indexedDB = isolated as unknown as IDBFactory
+
+    try {
+      // Bump the stored version out from under the module's fixed VERSION (1) by opening it
+      // directly first, so the module's next open is rejected with a genuine, asynchronous
+      // IndexedDB error — the same class of one-off failure a blocked upgrade or a quota error
+      // would produce, not a contrived stand-in for one.
+      const blocker = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = isolated.open('cabins-offline', 2)
+        request.onupgradeneeded = () => {}
+        request.onsuccess = () => resolve(request.result as unknown as IDBDatabase)
+        request.onerror = () => reject(request.error)
+      })
+
+      vi.resetModules()
+      const fresh = await import('../src/offline/db')
+
+      await expect(fresh.putCache('x', 1)).rejects.toThrow()
+
+      // Clear the condition that caused the failure, the way a real one eventually clears
+      // (the blocking tab closes, quota frees up).
+      blocker.close()
+      await new Promise<void>((resolve, reject) => {
+        const request = isolated.deleteDatabase('cabins-offline')
+        request.onsuccess = () => resolve()
+        request.onerror = () => reject(request.error)
+      })
+
+      // If the rejected open were still cached, this would throw the same stale error again.
+      await fresh.putCache('x', 1)
+      expect((await fresh.readCache('x'))?.value).toBe(1)
+    } finally {
+      globalThis.indexedDB = realIndexedDB
+      vi.resetModules()
+    }
   })
 })

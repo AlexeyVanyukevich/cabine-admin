@@ -32,6 +32,11 @@ function db(): Promise<IDBPDatabase<Stores>> {
       database.createObjectStore('cache')
       database.createObjectStore('intents', { keyPath: 'id' })
     },
+  }).catch((cause: unknown) => {
+    // A rejected promise left in `open` would disable the queue for the life of the page, and
+    // the queue holds bookings that exist nowhere else. Drop it so the next call retries.
+    open = undefined
+    throw cause
   })
   return open
 }

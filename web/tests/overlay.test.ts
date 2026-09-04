@@ -48,7 +48,13 @@ function pending(payload: CreatePayload = PAYLOAD): Intent {
 
 describe('applyIntents', () => {
   it('returns the view untouched when nothing is queued', () => {
-    expect(applyIntents(VIEW, [], HOUSES)).toEqual(VIEW)
+    const before = structuredClone(VIEW)
+    const result = applyIntents(VIEW, [], HOUSES)
+
+    expect(result).toEqual(before)
+    expect(VIEW).toEqual(before) // the input itself was not mutated
+    expect(result.houses).not.toBe(VIEW.houses)
+    expect(result.bookings).not.toBe(VIEW.bookings)
   })
 
   it('shows a queued booking on the calendar', () => {
@@ -140,7 +146,13 @@ describe('applyIntents', () => {
   it('ignores an intent for a house not in this view', () => {
     // A month the owner has paged away from, or a house since deleted.
     const elsewhere = pending({ ...PAYLOAD, house_id: 'ffffffff-ffff-4fff-8fff-ffffffffffff' })
-    expect(applyIntents(VIEW, [elsewhere], HOUSES)).toEqual(VIEW)
+    const before = structuredClone(VIEW)
+    const result = applyIntents(VIEW, [elsewhere], HOUSES)
+
+    expect(result).toEqual(before)
+    expect(VIEW).toEqual(before) // the input itself was not mutated
+    expect(result.houses).not.toBe(VIEW.houses)
+    expect(result.bookings).not.toBe(VIEW.bookings)
   })
 
   it('ignores nights that fall outside the rendered window', () => {

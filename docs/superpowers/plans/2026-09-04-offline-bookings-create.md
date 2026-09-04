@@ -1734,10 +1734,16 @@ export async function runSync(deps: SyncDeps): Promise<SyncOutcome> {
 
   let sent = 0
   let deferred = false
+  // Counted as we go rather than re-read at the end: a second read would race whatever the
+  // page has written since, and the loop already knows every outcome it produced.
+  let conflicts = 0
 
   for (const intent of queue) {
     // Already refused for a reason resending cannot change.
-    if (intent.state === 'conflict') continue
+    if (intent.state === 'conflict') {
+      conflicts += 1
+      continue
+    }
 
     // Recorded before the request leaves, so a connection lost mid-flight still freezes the
     // payload. The engine refuses this key with a different body afterwards.
@@ -1774,11 +1780,11 @@ export async function runSync(deps: SyncDeps): Promise<SyncOutcome> {
             ? { code: cause.code, message: cause.message }
             : { code: 'unknown', message: 'Не удалось отправить' },
       })
+      conflicts += 1
     }
   }
 
-  const remaining = (await deps.read()).filter((intent) => intent.state === 'conflict')
-  if (remaining.length > 0) return 'conflicts'
+  if (conflicts > 0) return 'conflicts'
   if (deferred) return 'offline'
   return sent > 0 ? 'synced' : 'idle'
 }
@@ -2062,6 +2068,20 @@ Create `web/src/offline/offline.css`:
 
 In `web/src/App.tsx`, render `<ConnectionBanner />` above the routed content and hold the tray's open state. Read the file first and follow its existing structure; the banner belongs outside the router's switch so it shows on every screen.
 
+- [ ] **Step 5b: Read the calendar through the cache and the overlay**
+
+Tasks 4 and 6 produce `applyIntents` and `useCachedQuery` and nothing yet consumes them. Wire them in `web/src/routes/Calendar.tsx`:
+
+- Replace the `calendar` and `houses` `useQuery` calls with `useCachedQuery`, keyed
+  `calendar:<from>:<to>` and `houses`.
+- Pass the result through `applyIntents(view, intents, houses)` before handing it to
+  `Timeline`, taking `intents` from `useSync()`.
+- When `stale` is true, render the fetched-at stamp above the grid — for example
+  `Календарь на память, обновлён 14:32`. The error notice keeps its current behaviour when
+  there is no cache to fall back on, because an empty grid must never render.
+- A booking carrying `pending` opens the tray rather than `BookingDetails`: it has no engine
+  id, so the details sheet has nothing to fetch.
+
 - [ ] **Step 6: Typecheck and build**
 
 Run: `npm run --workspace web build`
@@ -2080,7 +2100,8 @@ git commit -m "feat(web): say continuously whether the calendar is live and what
 
 **Files:**
 - Create: `web/src/offline/ConflictScreen.tsx`
-- Modify: `web/src/offline/intents.ts` (add `discardable` reasons copy helper)
+- Create: `web/src/offline/conflict.ts`
+- Modify: `web/src/App.tsx`
 - Test: `web/tests/conflict.test.ts`
 
 **Interfaces:**

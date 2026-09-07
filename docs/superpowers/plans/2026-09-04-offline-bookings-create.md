@@ -24,6 +24,7 @@
 - **The owner is never shown a server message.** All copy is Russian, looked up by error code in `web/src/errors.ts`.
 - **Dates are plain `YYYY-MM-DD` strings** and are never turned into a `Date` for arithmetic. Use the helpers in `web/src/calendar/nights.ts`.
 - **Scope of this plan is `create` only.** Reschedule, cancel and amend are Plan 2, per spec §11.
+- **The gate is `./run check`** — types, formatting and both suites. Running the tests and the typecheck alone is not the gate: `npx prettier --check .` is part of it, and `.prettierrc` sets `printWidth: 100`, `singleQuote: true`, `semi: false`. Verify formatting before every commit.
 
 ## File Structure
 

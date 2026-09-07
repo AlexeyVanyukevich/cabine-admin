@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Let the owner record a *new* booking with no network at all, and have it become a real engine booking when connectivity returns — including when the engine refuses the night.
+**Goal:** Let the owner record a _new_ booking with no network at all, and have it become a real engine booking when connectivity returns — including when the engine refuses the night.
 
 **Architecture:** Two IndexedDB stores hold a rendering cache and one desired-state intent per booking. A pure `applyIntents(cache, intents)` function is the single place that decides what the owner sees. A serial sync loop replays intents through this project's own server — never the engine directly — using a client-generated idempotency key so a lost response cannot double-book.
 
@@ -14,7 +14,7 @@
 
 - **The engine API key never reaches a browser.** Nothing in this plan adds an engine call from the client. Sync posts to this project's server, which stays the only engine caller.
 - **Writes go to the engine first, then here.** Unchanged: sync calls `POST /api/bookings`, which calls the engine before its own database.
-- **An unreachable engine renders an error, never an empty calendar.** A stale grid may render *only* under a staleness stamp; an empty grid never renders.
+- **An unreachable engine renders an error, never an empty calendar.** A stale grid may render _only_ under a staleness stamp; an empty grid never renders.
 - **Money is integer minor units.** No float anywhere near a total.
 - **Server modules are `NodeNext`:** relative imports carry `.js` even in a `.ts` file. The web workspace does not.
 - **`tsconfig.base.json` sets `exactOptionalPropertyTypes: true`.** An optional property is omitted, never assigned `undefined` — `{ ...intent, lastError: undefined }` does not compile. Build the object without the key instead.
@@ -29,33 +29,33 @@
 
 **New — `web/src/offline/`, the whole subsystem:**
 
-| File | Responsibility |
-| ---- | -------------- |
-| `db.ts` | IndexedDB open/read/write for the two stores. The only file that knows IndexedDB exists |
-| `intents.ts` | The `Intent` type, construction, and the edit/freeze rules. Pure |
-| `overlay.ts` | `applyIntents(cache, intents)`. Pure, no I/O, no React |
-| `sync.ts` | The serial replay loop and its state machine. Takes its I/O as injected dependencies |
-| `useOffline.ts` | React glue: online state, sync triggers, and the cached-read hook |
-| `ConnectionBanner.tsx` | App-wide status: offline / syncing / synced / needs attention |
-| `SyncTray.tsx` | The list of everything unsent |
-| `ConflictScreen.tsx` | Wanted-versus-actual, with the resolution actions |
-| `offline.css` | Styles for the three components above |
+| File                   | Responsibility                                                                          |
+| ---------------------- | --------------------------------------------------------------------------------------- |
+| `db.ts`                | IndexedDB open/read/write for the two stores. The only file that knows IndexedDB exists |
+| `intents.ts`           | The `Intent` type, construction, and the edit/freeze rules. Pure                        |
+| `overlay.ts`           | `applyIntents(cache, intents)`. Pure, no I/O, no React                                  |
+| `sync.ts`              | The serial replay loop and its state machine. Takes its I/O as injected dependencies    |
+| `useOffline.ts`        | React glue: online state, sync triggers, and the cached-read hook                       |
+| `ConnectionBanner.tsx` | App-wide status: offline / syncing / synced / needs attention                           |
+| `SyncTray.tsx`         | The list of everything unsent                                                           |
+| `ConflictScreen.tsx`   | Wanted-versus-actual, with the resolution actions                                       |
+| `offline.css`          | Styles for the three components above                                                   |
 
 **Modified:**
 
-| File | Change |
-| ---- | ------ |
-| `web/vite.config.ts` | Add `vite-plugin-pwa` |
-| `web/src/main.tsx` | Relax `staleTime`, and correct the comment that forbids caching |
-| `web/src/api.ts` | Export `isOffline(cause)` |
-| `web/src/errors.ts` | Copy for the new codes |
-| `web/src/booking/NewBooking.tsx` | Capture to an intent when offline |
-| `web/src/routes/Calendar.tsx` | Read through the overlay; render the stamp and banner |
-| `server/src/modules/bookings/booking.schemas.ts` | `idempotency_key`, `currency` |
-| `server/src/modules/bookings/booking.service.ts` | Use both instead of generating/reading them |
-| `tests/ui/helpers.ts` | `bookViaPage` must send the two new fields |
-| `server/tests/integration/create-booking.test.ts` | Cover the two new fields |
-| `docs/architecture.md` | The §9 documentation obligation |
+| File                                              | Change                                                          |
+| ------------------------------------------------- | --------------------------------------------------------------- |
+| `web/vite.config.ts`                              | Add `vite-plugin-pwa`                                           |
+| `web/src/main.tsx`                                | Relax `staleTime`, and correct the comment that forbids caching |
+| `web/src/api.ts`                                  | Export `isOffline(cause)`                                       |
+| `web/src/errors.ts`                               | Copy for the new codes                                          |
+| `web/src/booking/NewBooking.tsx`                  | Capture to an intent when offline                               |
+| `web/src/routes/Calendar.tsx`                     | Read through the overlay; render the stamp and banner           |
+| `server/src/modules/bookings/booking.schemas.ts`  | `idempotency_key`, `currency`                                   |
+| `server/src/modules/bookings/booking.service.ts`  | Use both instead of generating/reading them                     |
+| `tests/ui/helpers.ts`                             | `bookViaPage` must send the two new fields                      |
+| `server/tests/integration/create-booking.test.ts` | Cover the two new fields                                        |
+| `docs/architecture.md`                            | The §9 documentation obligation                                 |
 
 ---
 
@@ -64,11 +64,13 @@
 **Spec gap, deliberately filled here.** The spec assumes the app can be opened with no network but never says how. Without a service worker the browser shows its own offline page and nothing else in this plan is reachable. The manifest, icons and standalone meta tags already shipped in `8926497`; only the service worker is missing.
 
 **Files:**
+
 - Modify: `web/vite.config.ts`
 - Modify: `web/package.json`
 - Test: `tests/ui/offline-shell.spec.ts`
 
 **Interfaces:**
+
 - Consumes: nothing
 - Produces: a registered service worker that precaches the built shell and never caches `/api`
 
@@ -163,7 +165,8 @@ export default defineConfig({
           },
           {
             // The interface's typeface, so the offline shell is not a system-font fallback.
-            urlPattern: ({ url }) => url.origin.endsWith('googleapis.com') || url.origin.endsWith('gstatic.com'),
+            urlPattern: ({ url }) =>
+              url.origin.endsWith('googleapis.com') || url.origin.endsWith('gstatic.com'),
             handler: 'CacheFirst',
             options: {
               cacheName: 'fonts',
@@ -205,11 +208,13 @@ git commit -m "feat(web): precache the app shell so the journal opens with no ne
 ## Task 2: The IndexedDB stores
 
 **Files:**
+
 - Create: `web/src/offline/db.ts`
 - Test: `web/tests/offline-db.test.ts`
 - Modify: `web/package.json`
 
 **Interfaces:**
+
 - Consumes: `Intent` from Task 3 — but Task 3 is pure types, so write Task 3's `intents.ts` first if executing strictly in order. This task only needs the type to exist.
 - Produces:
   - `putCache<T>(key: string, value: T): Promise<void>`
@@ -233,7 +238,14 @@ Create `web/tests/offline-db.test.ts`:
 ```ts
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { allIntents, dropIntent, putCache, putIntent, readCache, resetForTests } from '../src/offline/db'
+import {
+  allIntents,
+  dropIntent,
+  putCache,
+  putIntent,
+  readCache,
+  resetForTests,
+} from '../src/offline/db'
 import type { Intent } from '../src/offline/intents'
 
 const INTENT: Intent = {
@@ -407,10 +419,12 @@ git commit -m "feat(web): store the offline cache and the intent queue in Indexe
 ## Task 3: The intent type and its edit rules
 
 **Files:**
+
 - Create: `web/src/offline/intents.ts`
 - Test: `web/tests/intents.test.ts`
 
 **Interfaces:**
+
 - Consumes: nothing
 - Produces:
   - `interface CreatePayload`, `interface Intent`, `type IntentState = 'pending' | 'syncing' | 'conflict'`
@@ -472,7 +486,11 @@ describe('editIntent', () => {
       state: 'conflict' as const,
       lastError: { code: 'slot_unavailable', message: 'taken' },
     }
-    const edited = editIntent(conflicted, { ...PAYLOAD, check_in: '2026-10-05', check_out: '2026-10-07' })
+    const edited = editIntent(conflicted, {
+      ...PAYLOAD,
+      check_in: '2026-10-05',
+      check_out: '2026-10-07',
+    })
 
     expect(edited.state).toBe('pending')
     expect(edited.lastError).toBeUndefined()
@@ -591,10 +609,12 @@ git commit -m "feat(web): model an offline booking as desired state rather than 
 This is the largest test surface in the plan. Everything the owner looks at while offline reads through this function, so a mistake here is a mistake in every screen at once.
 
 **Files:**
+
 - Create: `web/src/offline/overlay.ts`
 - Test: `web/tests/overlay.test.ts`
 
 **Interfaces:**
+
 - Consumes: `Intent`, `CreatePayload` (Task 3); `CalendarView`, `Booking`, `House` from `web/src/api.ts`; `eachNight` from `web/src/calendar/nights.ts`
 - Produces:
   - `interface OverlayBooking extends Booking { pending?: { intentId: string; state: IntentState } }`
@@ -916,12 +936,14 @@ git commit -m "feat(web): lay queued bookings over the cached calendar in one pu
 ## Task 5: The server takes the idempotency key and the captured currency
 
 **Files:**
+
 - Modify: `server/src/modules/bookings/booking.schemas.ts`
 - Modify: `server/src/modules/bookings/booking.service.ts:94-136`
 - Modify: `tests/ui/helpers.ts` (`bookViaPage` must send the new fields)
 - Test: `server/tests/integration/create-booking.test.ts`
 
 **Interfaces:**
+
 - Consumes: `CurrencyCode` from `server/src/modules/settings/settings.schemas.js`
 - Produces: `POST /api/bookings` requires `idempotency_key` (uuid) and `currency` (one of the offered codes); `CreateBookingInput` gains both fields
 
@@ -930,51 +952,54 @@ git commit -m "feat(web): lay queued bookings over the cached calendar in one pu
 Append to `server/tests/integration/create-booking.test.ts`. Match the file's existing setup helpers — read the top of the file and reuse whatever it already uses to build an app and seed a house; do not invent a second harness.
 
 ```ts
-  it('books the engine under the key the client chose, so a replay cannot double-book', async () => {
-    const key = randomUUID()
-    const body = { ...validBody(), idempotency_key: key }
+it('books the engine under the key the client chose, so a replay cannot double-book', async () => {
+  const key = randomUUID()
+  const body = { ...validBody(), idempotency_key: key }
 
-    const first = await app.inject({ method: 'POST', url: '/api/bookings', payload: body })
-    const second = await app.inject({ method: 'POST', url: '/api/bookings', payload: body })
+  const first = await app.inject({ method: 'POST', url: '/api/bookings', payload: body })
+  const second = await app.inject({ method: 'POST', url: '/api/bookings', payload: body })
 
-    expect(first.statusCode).toBe(201)
-    // The engine answers a replayed key with the booking it already made. A server-generated
-    // key would have minted a new one here and held the night twice.
-    expect(second.statusCode).toBe(201)
-    expect(second.json().id).toBe(first.json().id)
+  expect(first.statusCode).toBe(201)
+  // The engine answers a replayed key with the booking it already made. A server-generated
+  // key would have minted a new one here and held the night twice.
+  expect(second.statusCode).toBe(201)
+  expect(second.json().id).toBe(first.json().id)
+})
+
+it('snapshots the currency the client captured, not the one set now', async () => {
+  // The owner agreed a price offline in euros; the setting has since moved to roubles.
+  await setCurrency('RUB')
+
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/bookings',
+    payload: { ...validBody(), idempotency_key: randomUUID(), currency: 'EUR' },
   })
 
-  it('snapshots the currency the client captured, not the one set now', async () => {
-    // The owner agreed a price offline in euros; the setting has since moved to roubles.
-    await setCurrency('RUB')
+  expect(response.statusCode).toBe(201)
+  expect(response.json().currency).toBe('EUR')
+})
 
-    const response = await app.inject({
-      method: 'POST',
-      url: '/api/bookings',
-      payload: { ...validBody(), idempotency_key: randomUUID(), currency: 'EUR' },
-    })
-
-    expect(response.statusCode).toBe(201)
-    expect(response.json().currency).toBe('EUR')
+it('refuses a currency that is not on offer', async () => {
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/bookings',
+    payload: { ...validBody(), idempotency_key: randomUUID(), currency: 'XYZ' },
   })
+  expect(response.statusCode).toBe(400)
+})
 
-  it('refuses a currency that is not on offer', async () => {
-    const response = await app.inject({
-      method: 'POST',
-      url: '/api/bookings',
-      payload: { ...validBody(), idempotency_key: randomUUID(), currency: 'XYZ' },
-    })
-    expect(response.statusCode).toBe(400)
-  })
+it('refuses a request with no idempotency key', async () => {
+  const { idempotency_key: _omitted, ...withoutKey } = {
+    ...validBody(),
+    idempotency_key: randomUUID(),
+  }
+  const response = await app.inject({ method: 'POST', url: '/api/bookings', payload: withoutKey })
 
-  it('refuses a request with no idempotency key', async () => {
-    const { idempotency_key: _omitted, ...withoutKey } = { ...validBody(), idempotency_key: randomUUID() }
-    const response = await app.inject({ method: 'POST', url: '/api/bookings', payload: withoutKey })
-
-    // Required rather than optional: there is one client, and an optional key degrades
-    // silently into exactly the unsafe retry it exists to prevent.
-    expect(response.statusCode).toBe(400)
-  })
+  // Required rather than optional: there is one client, and an optional key degrades
+  // silently into exactly the unsafe retry it exists to prevent.
+  expect(response.statusCode).toBe(400)
+})
 ```
 
 Add `import { randomUUID } from 'node:crypto'` at the top if it is not already there. `validBody()` and `setCurrency()` are local helpers — if the file has no equivalents, add them next to its existing ones:
@@ -1054,25 +1079,25 @@ export interface CreateBookingInput {
 Then in `create()`, replace the currency read and the generated key:
 
 ```ts
-    const { guest } = await this.guests.findOrCreate(body.guest)
+const { guest } = await this.guests.findOrCreate(body.guest)
 
-    // Taken from the request, not from settings. The booking records what it was agreed in,
-    // and for one captured offline that agreement happened before this request was sent.
-    const currency = body.currency
+// Taken from the request, not from settings. The booking records what it was agreed in,
+// and for one captured offline that agreement happened before this request was sent.
+const currency = body.currency
 
-    // The engine first, always. If the write below fails, a booking exists whose guest details
-    // are missing: the night is correctly held and the calendar shows it as an orphan for the
-    // owner to repair. The reverse order can leave a row for a booking that does not hold the
-    // night, which is how two guests end up in one house.
-    //
-    // The key is the client's. A retry after a lost answer replays the same one and gets the
-    // same booking back; a key minted here would have made a second.
-    const engineBooking = await this.engine.createBooking(
-      house.engine_resource_id,
-      body.check_in,
-      body.check_out,
-      body.idempotency_key,
-    )
+// The engine first, always. If the write below fails, a booking exists whose guest details
+// are missing: the night is correctly held and the calendar shows it as an orphan for the
+// owner to repair. The reverse order can leave a row for a booking that does not hold the
+// night, which is how two guests end up in one house.
+//
+// The key is the client's. A retry after a lost answer replays the same one and gets the
+// same booking back; a key minted here would have made a second.
+const engineBooking = await this.engine.createBooking(
+  house.engine_resource_id,
+  body.check_in,
+  body.check_out,
+  body.idempotency_key,
+)
 ```
 
 Remove the now-unused `randomUUID` import if nothing else in the file uses it, and drop the `settings.currentCurrency()` call from `create()`. Leave `SettingsService` injected — other methods and the constructor signature stay as they are.
@@ -1121,12 +1146,14 @@ git commit -m "feat(server): take the idempotency key and the agreed currency fr
 ## Task 6: Cache every good read, and say how old it is
 
 **Files:**
+
 - Create: `web/src/offline/useOffline.ts`
 - Modify: `web/src/main.tsx`
 - Modify: `web/src/api.ts`
 - Test: `web/tests/offline-hooks.test.ts`
 
 **Interfaces:**
+
 - Consumes: `putCache`, `readCache` (Task 2)
 - Produces:
   - `isOffline(cause: unknown): boolean` from `web/src/api.ts`
@@ -1323,11 +1350,13 @@ git commit -m "feat(web): serve the last good read under a staleness stamp when 
 ## Task 7: Capture a booking when the save cannot be sent
 
 **Files:**
+
 - Modify: `web/src/booking/NewBooking.tsx`
 - Modify: `web/src/errors.ts`
 - Test: `web/tests/capture.test.ts`
 
 **Interfaces:**
+
 - Consumes: `isOffline` (Task 6), `newCreateIntent` (Task 3), `putIntent` (Task 2)
 - Produces: `captureOrPost(payload, currency, deps): Promise<'sent' | 'queued'>` from `web/src/offline/capture.ts`
 
@@ -1372,7 +1401,11 @@ describe('captureOrPost', () => {
 
     expect(await captureOrPost(PAYLOAD, 'RUB', { post, save })).toBe('queued')
     expect(save).toHaveBeenCalledOnce()
-    expect(save.mock.calls[0]?.[0]).toMatchObject({ payload: PAYLOAD, currency: 'RUB', state: 'pending' })
+    expect(save.mock.calls[0]?.[0]).toMatchObject({
+      payload: PAYLOAD,
+      currency: 'RUB',
+      state: 'pending',
+    })
   })
 
   it('queues under the same key it tried to post with', async () => {
@@ -1470,32 +1503,32 @@ import { putIntent } from '../offline/db'
 ```
 
 ```ts
-  async function submit(event: FormEvent) {
-    event.preventDefault()
-    setBusy(true)
-    setError(undefined)
-    try {
-      const outcome = await captureOrPost(
-        {
-          house_id: house.id,
-          check_in: checkIn,
-          check_out: checkOut,
-          guest: { name, phone },
-          price_per_night: priceMinor,
-          addons: chosen.map((code) => ({ code })),
-          deposit: depositMinor,
-          ...(note.trim() === '' ? {} : { note }),
-        },
-        currency.code,
-        { post: api.post, save: putIntent },
-      )
-      onSaved(outcome)
-    } catch (cause) {
-      setError(messageFor(cause, 'Не удалось сохранить бронь'))
-    } finally {
-      setBusy(false)
-    }
+async function submit(event: FormEvent) {
+  event.preventDefault()
+  setBusy(true)
+  setError(undefined)
+  try {
+    const outcome = await captureOrPost(
+      {
+        house_id: house.id,
+        check_in: checkIn,
+        check_out: checkOut,
+        guest: { name, phone },
+        price_per_night: priceMinor,
+        addons: chosen.map((code) => ({ code })),
+        deposit: depositMinor,
+        ...(note.trim() === '' ? {} : { note }),
+      },
+      currency.code,
+      { post: api.post, save: putIntent },
+    )
+    onSaved(outcome)
+  } catch (cause) {
+    setError(messageFor(cause, 'Не удалось сохранить бронь'))
+  } finally {
+    setBusy(false)
   }
+}
 ```
 
 Change the prop type so the caller learns which happened:
@@ -1537,13 +1570,13 @@ becomes
 and `refresh` gains the parameter:
 
 ```ts
-  /** Nothing is optimistic: the calendar is refetched, because a stale one costs money. */
-  async function refresh(outcome: 'sent' | 'queued' = 'sent') {
-    setOpen(undefined)
-    dispatch({ type: 'cancel' })
-    // A queued booking has nothing new to fetch; the overlay already shows it.
-    if (outcome === 'sent') await queryClient.invalidateQueries({ queryKey: ['calendar'] })
-  }
+/** Nothing is optimistic: the calendar is refetched, because a stale one costs money. */
+async function refresh(outcome: 'sent' | 'queued' = 'sent') {
+  setOpen(undefined)
+  dispatch({ type: 'cancel' })
+  // A queued booking has nothing new to fetch; the overlay already shows it.
+  if (outcome === 'sent') await queryClient.invalidateQueries({ queryKey: ['calendar'] })
+}
 ```
 
 - [ ] **Step 8: Typecheck and run the suite**
@@ -1566,10 +1599,12 @@ git commit -m "feat(web): keep a booking on the phone when the save cannot leave
 ## Task 8: The sync loop
 
 **Files:**
+
 - Create: `web/src/offline/sync.ts`
 - Test: `web/tests/sync.test.ts`
 
 **Interfaces:**
+
 - Consumes: `Intent` (Task 3); `ApiError`, `NotSignedIn`, `isOffline` (Tasks 6 and existing)
 - Produces:
   - `type SyncOutcome = 'idle' | 'synced' | 'offline' | 'paused' | 'conflicts'`
@@ -1596,7 +1631,10 @@ const PAYLOAD: CreatePayload = {
   deposit: 0,
 }
 
-function deps(intents: Intent[], post: SyncDeps['post']): SyncDeps & {
+function deps(
+  intents: Intent[],
+  post: SyncDeps['post'],
+): SyncDeps & {
   saved: Intent[]
   dropped: string[]
 } {
@@ -1644,10 +1682,12 @@ describe('runSync', () => {
     const second = { ...newCreateIntent(PAYLOAD, 'RUB'), capturedAt: '2026-09-04T10:00:00.000Z' }
 
     const order: string[] = []
-    const post = vi.fn().mockImplementation(async (_path: string, body: { idempotency_key: string }) => {
-      order.push(body.idempotency_key)
-      return { id: 'engine-1' }
-    })
+    const post = vi
+      .fn()
+      .mockImplementation(async (_path: string, body: { idempotency_key: string }) => {
+        order.push(body.idempotency_key)
+        return { id: 'engine-1' }
+      })
 
     // Deliberately handed to sync in the wrong order: two queued creates can overlap each
     // other's nights, so the second must see the first's outcome.
@@ -1657,7 +1697,10 @@ describe('runSync', () => {
 
   it('parks a taken night as a conflict for the owner, and stops guessing', async () => {
     const intent = newCreateIntent(PAYLOAD, 'RUB')
-    const context = deps([intent], vi.fn().mockRejectedValue(new ApiError('slot_unavailable', 409, 'taken')))
+    const context = deps(
+      [intent],
+      vi.fn().mockRejectedValue(new ApiError('slot_unavailable', 409, 'taken')),
+    )
 
     expect(await runSync(context)).toBe('conflicts')
     expect(context.dropped).toEqual([])
@@ -1669,7 +1712,10 @@ describe('runSync', () => {
 
   it('leaves an intent pending when the server could not be reached', async () => {
     const intent = newCreateIntent(PAYLOAD, 'RUB')
-    const context = deps([intent], vi.fn().mockRejectedValue(new ApiError('offline', 0, 'Нет связи')))
+    const context = deps(
+      [intent],
+      vi.fn().mockRejectedValue(new ApiError('offline', 0, 'Нет связи')),
+    )
 
     expect(await runSync(context)).toBe('offline')
     expect(context.dropped).toEqual([])
@@ -1705,14 +1751,21 @@ describe('runSync', () => {
 
   it('marks an intent attempted before sending, not after', async () => {
     const intent = newCreateIntent(PAYLOAD, 'RUB')
-    const context = deps([intent], vi.fn().mockRejectedValue(new ApiError('offline', 0, 'Нет связи')))
+    const context = deps(
+      [intent],
+      vi.fn().mockRejectedValue(new ApiError('offline', 0, 'Нет связи')),
+    )
 
     await runSync(context)
     expect(context.saved[0]?.attempted).toBe(true)
   })
 
   it('skips intents already parked as conflicts', async () => {
-    const parked: Intent = { ...newCreateIntent(PAYLOAD, 'RUB'), state: 'conflict', attempted: true }
+    const parked: Intent = {
+      ...newCreateIntent(PAYLOAD, 'RUB'),
+      state: 'conflict',
+      attempted: true,
+    }
     const post = vi.fn()
 
     // Resending would earn the same refusal. It is the owner's to resolve.
@@ -1748,7 +1801,12 @@ export type SyncOutcome = 'idle' | 'synced' | 'offline' | 'paused' | 'conflicts'
  * Codes the engine documents as transient. They mean "ask again", not "the owner must decide",
  * and treating them as conflicts would put a resolution screen in front of a passing hiccup.
  */
-const RETRYABLE = new Set(['concurrent_update', 'rate_limited', 'internal_error', 'engine_unreachable'])
+const RETRYABLE = new Set([
+  'concurrent_update',
+  'rate_limited',
+  'internal_error',
+  'engine_unreachable',
+])
 
 /**
  * Replays the queue against this project's own server — never the engine, whose key is not in
@@ -1836,6 +1894,7 @@ git commit -m "feat(web): replay the queue serially, treating the engine's refus
 ## Task 9: The banner, the tray and the sync triggers
 
 **Files:**
+
 - Create: `web/src/offline/ConnectionBanner.tsx`
 - Create: `web/src/offline/SyncTray.tsx`
 - Create: `web/src/offline/offline.css`
@@ -1843,6 +1902,7 @@ git commit -m "feat(web): replay the queue serially, treating the engine's refus
 - Modify: `web/src/App.tsx`
 
 **Interfaces:**
+
 - Consumes: `runSync` (Task 8), `allIntents`, `putIntent`, `dropIntent` (Task 2), `useOnline` (Task 6)
 - Produces:
   - `useSync(): { outcome: SyncOutcome; intents: Intent[]; syncNow: () => void; reload: () => void }`
@@ -2128,12 +2188,14 @@ git commit -m "feat(web): say continuously whether the calendar is live and what
 ## Task 10: The conflict screen
 
 **Files:**
+
 - Create: `web/src/offline/ConflictScreen.tsx`
 - Create: `web/src/offline/conflict.ts`
 - Modify: `web/src/App.tsx`
 - Test: `web/tests/conflict.test.ts`
 
 **Interfaces:**
+
 - Consumes: `Intent`, `editIntent` (Task 3), `dropIntent`, `putIntent` (Task 2)
 - Produces: `conflictReason(intent: Intent): string`; `<ConflictScreen />`
 
@@ -2224,7 +2286,8 @@ const REASONS: Record<string, string> = {
   not_found: 'Дом больше не существует. Бронь не заведена.',
 }
 
-const GENERIC = 'Сервер не принял эту бронь. Бронь не заведена — проверьте данные и попробуйте снова.'
+const GENERIC =
+  'Сервер не принял эту бронь. Бронь не заведена — проверьте данные и попробуйте снова.'
 
 export function conflictReason(intent: Intent): string {
   return REASONS[intent.lastError?.code ?? ''] ?? GENERIC
@@ -2310,9 +2373,11 @@ git commit -m "feat(web): show what was wanted beside what the engine said, and 
 ## Task 11: The end-to-end journeys
 
 **Files:**
+
 - Create: `tests/ui/offline-booking.spec.ts`
 
 **Interfaces:**
+
 - Consumes: everything above; `seedHouse`, `resetAppDb`, `setOwnerPassword`, `monthStart`, `bookViaPage` from `tests/ui/helpers.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -2351,7 +2416,10 @@ test('a booking taken with no signal reaches the engine when the signal returns'
   // The grid is the cached one, and it says so rather than pretending to be live.
   await expect(page.getByText(/Нет сети/)).toBeVisible()
 
-  await page.getByRole('button', { name: new RegExp(`${MONTH.slice(8, 10)}`) }).first().click()
+  await page
+    .getByRole('button', { name: new RegExp(`${MONTH.slice(8, 10)}`) })
+    .first()
+    .click()
   await page.getByLabel('Имя').fill('Аня')
   await page.getByLabel('Телефон').fill('+375291234567')
   await page.getByRole('button', { name: 'Сохранить' }).click()
@@ -2369,20 +2437,27 @@ test('a booking taken with no signal reaches the engine when the signal returns'
     const response = await fetch(`/api/calendar?from=${month}&to=${month.slice(0, 8)}28`, {
       credentials: 'same-origin',
     })
-    return ((await response.json()) as { bookings: Array<{ guest: { name: string } | null }> }).bookings
+    return ((await response.json()) as { bookings: Array<{ guest: { name: string } | null }> })
+      .bookings
   }, MONTH)
 
   expect(bookings.filter((booking) => booking.guest?.name === 'Аня')).toHaveLength(1)
 })
 
-test('a night taken while offline is escalated, not silently dropped', async ({ page, context }) => {
+test('a night taken while offline is escalated, not silently dropped', async ({
+  page,
+  context,
+}) => {
   const checkIn = addDays(MONTH, 10)
   const checkOut = addDays(MONTH, 12)
 
   await context.setOffline(true)
   await page.reload()
 
-  await page.getByRole('button', { name: new RegExp(String(Number(checkIn.slice(8, 10)))) }).first().click()
+  await page
+    .getByRole('button', { name: new RegExp(String(Number(checkIn.slice(8, 10)))) })
+    .first()
+    .click()
   await page.getByLabel('Имя').fill('Аня')
   await page.getByLabel('Телефон').fill('+375291234567')
   await page.getByRole('button', { name: 'Сохранить' }).click()
@@ -2418,7 +2493,8 @@ test('a night taken while offline is escalated, not silently dropped', async ({ 
     const response = await fetch(`/api/calendar?from=${month}&to=${month.slice(0, 8)}28`, {
       credentials: 'same-origin',
     })
-    return ((await response.json()) as { bookings: Array<{ guest: { name: string } | null }> }).bookings
+    return ((await response.json()) as { bookings: Array<{ guest: { name: string } | null }> })
+      .bookings
   }, MONTH)
 
   expect(bookings.filter((booking) => booking.guest?.name === 'Аня')).toHaveLength(0)
@@ -2454,6 +2530,7 @@ git commit -m "test(ui): prove a booking survives a dead zone, and that a lost r
 Spec §9 makes this an obligation, not a nicety: the IndexedDB cache holds dates and booking statuses, which the server deliberately does not. A reader who finds that without explanation will conclude the second invariant was broken.
 
 **Files:**
+
 - Modify: `docs/architecture.md`
 
 - [ ] **Step 1: Read the two sections that are now wrong**
@@ -2515,18 +2592,18 @@ git commit -m "docs: record the offline cache, the client idempotency key and th
 
 **Spec coverage.**
 
-| Spec section | Task |
-| ------------ | ---- |
-| §2 The reversal | 6 (the stamp), 12 (documented) |
-| §3 Desired state, collapse rules | 3 — create-only subset; the cancel-collapse row is Plan 2 |
-| §4 Storage, `Intent`, `applyIntents` | 2, 3, 4 |
-| §5 Sync triggers, serial, transitions, freeze rule | 8, 9 |
-| §6 Conflicts | 8 (branching), 10 (screen) |
-| §7 Server changes | 5 |
-| §8 Interface — five surfaces | 6 (stamp), 9 (banner, tray, pending treatment), 10 (conflict screen) |
-| §9 Invariants unchanged | 12 |
-| §10 Testing | every task; 11 for the journeys |
-| §11 Build order | this plan is the create half |
+| Spec section                                       | Task                                                                 |
+| -------------------------------------------------- | -------------------------------------------------------------------- |
+| §2 The reversal                                    | 6 (the stamp), 12 (documented)                                       |
+| §3 Desired state, collapse rules                   | 3 — create-only subset; the cancel-collapse row is Plan 2            |
+| §4 Storage, `Intent`, `applyIntents`               | 2, 3, 4                                                              |
+| §5 Sync triggers, serial, transitions, freeze rule | 8, 9                                                                 |
+| §6 Conflicts                                       | 8 (branching), 10 (screen)                                           |
+| §7 Server changes                                  | 5                                                                    |
+| §8 Interface — five surfaces                       | 6 (stamp), 9 (banner, tray, pending treatment), 10 (conflict screen) |
+| §9 Invariants unchanged                            | 12                                                                   |
+| §10 Testing                                        | every task; 11 for the journeys                                      |
+| §11 Build order                                    | this plan is the create half                                         |
 
 Not covered, by design: §3's `create`-then-`cancel` collapse, and §6's `update` and `cancel` rows. Those operations do not exist until Plan 2, so testing their collapse now would test unreachable code.
 

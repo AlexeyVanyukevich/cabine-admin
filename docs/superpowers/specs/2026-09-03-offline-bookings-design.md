@@ -36,7 +36,7 @@ what they recorded with the engine when the connection returns.
 ### The driving case
 
 The owner is at the houses, out of signal, and a guest calls to book. They need to write it
-down *in the app*, with the guest, the price and the add-on, and have it become a real booking
+down _in the app_, with the guest, the price and the add-on, and have it become a real booking
 without retyping once they are back in coverage.
 
 ### In scope
@@ -48,11 +48,11 @@ without retyping once they are back in coverage.
 
 ### Out of scope
 
-| Left out                              | Why                                                                                   |
-| ------------------------------------- | ------------------------------------------------------------------------------------- |
+| Left out                              | Why                                                                                    |
+| ------------------------------------- | -------------------------------------------------------------------------------------- |
 | Background sync while the app is shut | The Background Sync API is Chromium-only; iOS Safari has never shipped it. Section 5   |
 | Offline changes to houses or settings | Rare, deliberate, and safely done from a desk. Only bookings are urgent in a dead zone |
-| A mutation log with an audit trail    | One owner, no auditor. Section 3 takes the desired-state model instead                |
+| A mutation log with an audit trail    | One owner, no auditor. Section 3 takes the desired-state model instead                 |
 | Conflict-free replicated types        | Two devices and one writer do not need CRDTs to converge                               |
 | Automatic conflict resolution         | Occupancy is money. A refused booking is escalated to the owner, never guessed at      |
 
@@ -82,7 +82,7 @@ normal outcome.
 
 **The fourth invariant is unchanged in substance.** "An unreachable engine renders an error,
 never an empty calendar" exists so that an empty grid is never read as "everything is free".
-An empty grid is still never rendered. A *stamped, stale* grid is, and it says so.
+An empty grid is still never rendered. A _stamped, stale_ grid is, and it says so.
 
 ---
 
@@ -100,12 +100,12 @@ intermediate history that, with one owner and no auditor, nobody will ever read.
 
 Desired state collapses the same scenarios into one operation per booking:
 
-| Offline sequence                | What is sent                    |
-| ------------------------------- | ------------------------------- |
-| create, then amend, then amend  | one `create` with final values  |
-| create, then cancel             | **nothing** — the intent is deleted |
-| reschedule, then amend          | one `update` carrying both      |
-| amend, then cancel              | one `cancel`                    |
+| Offline sequence               | What is sent                        |
+| ------------------------------ | ----------------------------------- |
+| create, then amend, then amend | one `create` with final values      |
+| create, then cancel            | **nothing** — the intent is deleted |
+| reschedule, then amend         | one `update` carrying both          |
+| amend, then cancel             | one `cancel`                        |
 
 The create-then-cancel row is the clearest argument for the model: a booking that was taken and
 dropped before it ever reached the engine should leave no trace, and here that falls out of the
@@ -128,7 +128,7 @@ their prices and add-ons, settings, and guests for autocomplete. Each entry carr
 
 **This is a rendering cache and never a source of truth.** It is replaced wholesale by the next
 successful read and is never merged with one. It holds dates and booking statuses, which the
-*server* still does not — see section 9.
+_server_ still does not — see section 9.
 
 ### `intents`
 
@@ -137,19 +137,19 @@ booking that does not yet exist.
 
 ```ts
 interface Intent {
-  id: string               // client UUID; also the engine idempotency key
+  id: string // client UUID; also the engine idempotency key
   bookingId: string | null // null until the booking exists server-side
   op: 'create' | 'update' | 'cancel'
-  capturedAt: string       // when the owner hit save
-  currency: string         // captured here, never resolved at sync time
-  payload: { /* desired end state, not a delta */ }
+  capturedAt: string // when the owner hit save
+  currency: string // captured here, never resolved at sync time
+  payload: {/* desired end state, not a delta */}
   state: 'pending' | 'syncing' | 'conflict'
   lastError?: { code: string; message: string }
 }
 ```
 
 There are three operations, not four: `update` carries the booking's whole desired state — its
-nights *and* its money — because the collapse rules make a reschedule and an amend
+nights _and_ its money — because the collapse rules make a reschedule and an amend
 indistinguishable once both are pending on one booking. Sync decides what to call: the engine is
 asked to reschedule only when the nights differ from the cached booking, and `amend` runs for
 the money either way. Section 6 lists the two halves separately because they fail differently,
@@ -212,7 +212,7 @@ loses bookings that exist nowhere else.
 ### The freeze rule
 
 The engine answers `409 idempotency_key_reused` to the same key carrying a different body. That
-collides with section 3's collapse rule: if a create was attempted and only its *response* was
+collides with section 3's collapse rule: if a create was attempted and only its _response_ was
 lost, a later offline edit would replay the same key with a changed payload and be refused for
 a reason that has nothing to do with availability.
 
@@ -233,15 +233,15 @@ the night twice. Section 7 moves it to the client.
 A conflict is a normal outcome, not an error state. The engine is the arbiter, and its refusal
 is escalated to the owner rather than resolved by guesswork — occupancy is money.
 
-| Operation        | Engine answer                     | What it means                                | Resolution offered                                              |
-| ---------------- | --------------------------------- | -------------------------------------------- | --------------------------------------------------------------- |
-| create           | `409 slot_unavailable`            | Night taken while offline. Nothing created    | New dates, other house, or discard — details preserved           |
-| create           | replay of a landed key            | Already created; this is the same booking     | Silent success. No duplicate                                     |
-| update (dates)   | `409 slot_unavailable`            | Target taken. **Booking still exists, unmoved** | Retry elsewhere or abandon the move                             |
-| update (money)   | —                                 | Cannot conflict; `amend` never calls the engine | Last-write-wins against the other device                       |
-| update           | `404 not_found`                   | Booking removed or cancelled elsewhere        | Told plainly; the intent is dropped                              |
-| cancel           | `409 invalid_state_transition`    | Already cancelled — the desired state holds   | **Treated as success**, not a conflict                           |
-| cancel           | `404 not_found`                   | Already gone — the desired state holds        | **Treated as success**                                           |
+| Operation      | Engine answer                  | What it means                                   | Resolution offered                                     |
+| -------------- | ------------------------------ | ----------------------------------------------- | ------------------------------------------------------ |
+| create         | `409 slot_unavailable`         | Night taken while offline. Nothing created      | New dates, other house, or discard — details preserved |
+| create         | replay of a landed key         | Already created; this is the same booking       | Silent success. No duplicate                           |
+| update (dates) | `409 slot_unavailable`         | Target taken. **Booking still exists, unmoved** | Retry elsewhere or abandon the move                    |
+| update (money) | —                              | Cannot conflict; `amend` never calls the engine | Last-write-wins against the other device               |
+| update         | `404 not_found`                | Booking removed or cancelled elsewhere          | Told plainly; the intent is dropped                    |
+| cancel         | `409 invalid_state_transition` | Already cancelled — the desired state holds     | **Treated as success**, not a conflict                 |
+| cancel         | `404 not_found`                | Already gone — the desired state holds          | **Treated as success**                                 |
 
 Two rows carry most of the design's weight.
 
@@ -286,7 +286,7 @@ The engine needs no changes. Its per-`(resource_id, idempotency_key)` uniqueness
 Five surfaces. The first four are chrome; the fifth is the only genuinely new screen.
 
 1. **A connection banner**, app-wide and not dismissible while offline, carrying four states:
-   offline, syncing, all synced, and *N* needing attention. It is what stops the owner ever
+   offline, syncing, all synced, and _N_ needing attention. It is what stops the owner ever
    being unsure whether what they see is real.
 2. **A staleness stamp** on the calendar, showing when the cache was fetched.
 3. **A pending treatment on every affected booking.** A queued create renders provisionally; a
@@ -304,7 +304,7 @@ Five surfaces. The first four are chrome; the fifth is the only genuinely new sc
 ## 9. What this does not change
 
 **The engine API key still never reaches a browser.** Nothing here moves an engine call to the
-client. The queue replays requests to *this* server, which remains the only caller, so every
+client. The queue replays requests to _this_ server, which remains the only caller, so every
 rule enforced on the way through stays real.
 
 **Writes still go to the engine first.** Sync calls this server, which calls the engine before

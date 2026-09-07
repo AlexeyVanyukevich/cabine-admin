@@ -1,7 +1,14 @@
 import 'fake-indexeddb/auto'
 import { IDBFactory } from 'fake-indexeddb'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { allIntents, dropIntent, putCache, putIntent, readCache, resetForTests } from '../src/offline/db'
+import {
+  allIntents,
+  dropIntent,
+  putCache,
+  putIntent,
+  readCache,
+  resetForTests,
+} from '../src/offline/db'
 import type { Intent } from '../src/offline/intents'
 
 const INTENT: Intent = {
@@ -76,9 +83,21 @@ describe('the intent store', () => {
     // Ids sort the opposite way to capturedAt, and none of the three is written in either
     // order — so a dropped `.sort()`, or one that sorts by id instead of capturedAt, fails
     // this assertion instead of passing it by coincidence.
-    const earliest: Intent = { ...INTENT, id: 'cccccccc-1111-4111-8111-cccccccccccc', capturedAt: '2026-09-01T00:00:00.000Z' }
-    const middle: Intent = { ...INTENT, id: 'bbbbbbbb-1111-4111-8111-bbbbbbbbbbbb', capturedAt: '2026-09-02T00:00:00.000Z' }
-    const latest: Intent = { ...INTENT, id: 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', capturedAt: '2026-09-03T00:00:00.000Z' }
+    const earliest: Intent = {
+      ...INTENT,
+      id: 'cccccccc-1111-4111-8111-cccccccccccc',
+      capturedAt: '2026-09-01T00:00:00.000Z',
+    }
+    const middle: Intent = {
+      ...INTENT,
+      id: 'bbbbbbbb-1111-4111-8111-bbbbbbbbbbbb',
+      capturedAt: '2026-09-02T00:00:00.000Z',
+    }
+    const latest: Intent = {
+      ...INTENT,
+      id: 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',
+      capturedAt: '2026-09-03T00:00:00.000Z',
+    }
 
     await putIntent(middle)
     await putIntent(latest)

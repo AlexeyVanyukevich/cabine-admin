@@ -47,7 +47,11 @@ describe('editIntent', () => {
       state: 'conflict' as const,
       lastError: { code: 'slot_unavailable', message: 'taken' },
     }
-    const edited = editIntent(conflicted, { ...PAYLOAD, check_in: '2026-10-05', check_out: '2026-10-07' })
+    const edited = editIntent(conflicted, {
+      ...PAYLOAD,
+      check_in: '2026-10-05',
+      check_out: '2026-10-07',
+    })
 
     expect(edited.state).toBe('pending')
     expect(edited.lastError).toBeUndefined()

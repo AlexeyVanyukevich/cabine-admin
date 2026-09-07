@@ -65,7 +65,8 @@ export function applyIntents(view: CalendarView, intents: Intent[], houses: Hous
   // Both early returns hand back fresh `houses`/`bookings` arrays rather than the caller's own,
   // so a screen can treat the result the same way regardless of whether anything was queued —
   // never a container it must remember not to sort or splice in place.
-  if (intents.length === 0) return { ...view, houses: [...view.houses], bookings: [...view.bookings] }
+  if (intents.length === 0)
+    return { ...view, houses: [...view.houses], bookings: [...view.bookings] }
 
   const rendered = view.houses.map((house) => house.id)
   const relevant = intents.filter((intent) => rendered.includes(intent.payload.house_id))

@@ -85,7 +85,9 @@ export async function bookViaPage(
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
+      // Filled in here rather than at every call site: the fields are required by the schema
+      // and carry no meaning for a test that only wants a booking to exist.
+      body: JSON.stringify({ idempotency_key: crypto.randomUUID(), currency: 'RUB', ...body }),
     })
     if (!response.ok) throw new Error(`${response.status} ${await response.text()}`)
     return ((await response.json()) as { id: string }).id

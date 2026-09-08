@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { inject } from 'vitest'
 import type { FastifyInstance } from 'fastify'
 import { getTestDb } from './helpers.js'
@@ -72,6 +73,8 @@ export async function seedBooking(
       price_per_night: 30000,
       addons: [{ code: 'sauna' }],
       deposit: 20000,
+      idempotency_key: randomUUID(),
+      currency: 'RUB',
       ...input.overrides,
     },
   })

@@ -56,6 +56,8 @@ export function NewBooking({ house, checkIn, checkOut, onCancel, onSaved }: Prop
         price_per_night: priceMinor,
         addons: chosen.map((code) => ({ code })),
         deposit: depositMinor,
+        idempotency_key: crypto.randomUUID(),
+        currency: currency.code,
         ...(note.trim() === '' ? {} : { note }),
       })
       onSaved()

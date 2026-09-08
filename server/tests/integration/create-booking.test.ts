@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, inject, vi } from 'vitest'
 import type { FastifyInstance } from 'fastify'
 import { buildTestApp, closeTestDb, getTestDb, resetDb } from './helpers.js'
@@ -41,11 +42,16 @@ const booking = (overrides: Record<string, unknown> = {}) => ({
   price_per_night: 30000,
   addons: [{ code: 'sauna' }],
   deposit: 20000,
+  idempotency_key: randomUUID(),
+  currency: 'RUB',
   ...overrides,
 })
 
 const post = (payload: Record<string, unknown>) =>
   app.inject({ method: 'POST', url: '/api/bookings', cookies, payload })
+
+const setCurrency = (currency: string) =>
+  app.inject({ method: 'PATCH', url: '/api/settings', cookies, payload: { currency } })
 
 describe('POST /api/bookings', () => {
   it('creates it and returns the joined view', async () => {
@@ -159,53 +165,27 @@ describe('POST /api/bookings', () => {
 
 /**
  * The same rule that keeps `price_per_night` on the row rather than read live from the house: a
- * booking means what it meant when it was agreed. Without this, changing the setting would
- * relabel settled totals and show the owner a debt that never existed.
+ * booking means what it meant when it was agreed. Sent by the client rather than read from
+ * settings, because a booking captured offline was priced before this request was ever sent —
+ * resolving the currency now would let a setting changed in between reinterpret it.
  */
 describe('the currency a booking was agreed in', () => {
-  const setCurrency = (currency: string) =>
-    app.inject({ method: 'PATCH', url: '/api/settings', cookies, payload: { currency } })
-
-  it('is the one in force when it was made', async () => {
-    await setCurrency('BYN')
-
-    const response = await app.inject({
-      method: 'POST',
-      url: '/api/bookings',
-      cookies,
-      payload: booking(),
-    })
-
-    expect(response.statusCode).toBe(201)
-    expect(response.json().currency).toBe('BYN')
-  })
-
   it('survives a later change of the setting', async () => {
-    const created = await app.inject({
-      method: 'POST',
-      url: '/api/bookings',
-      cookies,
-      payload: booking(),
-    })
-    expect(created.json().currency).toBe('RUB')
+    const created = await post(booking({ currency: 'EUR' }))
+    expect(created.json().currency).toBe('EUR')
 
-    await setCurrency('EUR')
+    await setCurrency('BYN')
 
     const reread = await app.inject({
       method: 'GET',
       url: `/api/bookings/${created.json().id}`,
       cookies,
     })
-    expect(reread.json().currency).toBe('RUB')
+    expect(reread.json().currency).toBe('EUR')
   })
 
   it('does not move the total either', async () => {
-    const created = await app.inject({
-      method: 'POST',
-      url: '/api/bookings',
-      cookies,
-      payload: booking(),
-    })
+    const created = await post(booking())
     const before = created.json().total
 
     await setCurrency('EUR')
@@ -216,5 +196,44 @@ describe('the currency a booking was agreed in', () => {
       cookies,
     })
     expect(reread.json().total).toBe(before)
+  })
+
+  // The owner agreed a price offline in euros; the setting has since moved to roubles.
+  it('snapshots the currency the client captured, not the one set now', async () => {
+    await setCurrency('RUB')
+
+    const response = await post(booking({ currency: 'EUR' }))
+
+    expect(response.statusCode).toBe(201)
+    expect(response.json().currency).toBe('EUR')
+  })
+
+  it('refuses a currency that is not on offer', async () => {
+    const response = await post(booking({ currency: 'XYZ' }))
+    expect(response.statusCode).toBe(400)
+  })
+})
+
+describe('the idempotency key', () => {
+  it('books the engine under the key the client chose, so a replay cannot double-book', async () => {
+    const body = booking()
+
+    const first = await post(body)
+    const second = await post(body)
+
+    expect(first.statusCode).toBe(201)
+    // The engine answers a replayed key with the booking it already made. A server-generated
+    // key would have minted a new one here and held the night twice.
+    expect(second.statusCode).toBe(201)
+    expect(second.json().id).toBe(first.json().id)
+  })
+
+  it('refuses a request with no idempotency key', async () => {
+    const { idempotency_key: _omitted, ...withoutKey } = booking()
+    const response = await post(withoutKey)
+
+    // Required rather than optional: there is one client, and an optional key degrades
+    // silently into exactly the unsafe retry it exists to prevent.
+    expect(response.statusCode).toBe(400)
   })
 })

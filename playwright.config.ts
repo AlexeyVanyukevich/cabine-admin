@@ -1,5 +1,4 @@
 import { defineConfig, devices } from '@playwright/test'
-import { PORT } from './tests/ui/global-setup.js'
 
 export default defineConfig({
   testDir: './tests/ui',
@@ -11,9 +10,7 @@ export default defineConfig({
   retries: 0,
   timeout: 30_000,
   reporter: [['list']],
-  // The server's own worker registers relative to the origin it was served from, so a spec
-  // exercising it must navigate with `page.goto('/')` rather than an absolute URL built by hand.
-  use: { trace: 'on-first-retry', baseURL: `http://127.0.0.1:${PORT}` },
+  use: { trace: 'on-first-retry' },
   projects: [
     {
       name: 'chromium',

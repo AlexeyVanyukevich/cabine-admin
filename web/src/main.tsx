@@ -7,8 +7,10 @@ import './styles.css'
 const client = new QueryClient({
   defaultOptions: {
     queries: {
-      // The calendar must never show a stale picture of who is free: the owner is deciding
-      // whether a guest fits while looking at it.
+      // Always refetched, never served from an in-memory cache without asking: the owner is
+      // deciding whether a guest fits while looking at this. What may be shown when the server
+      // cannot be reached is the IndexedDB cache, and only under a stamp saying how old it is —
+      // see `offline/useOffline.ts`.
       staleTime: 0,
       refetchOnWindowFocus: true,
       retry: false,

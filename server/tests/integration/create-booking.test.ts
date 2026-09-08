@@ -226,6 +226,15 @@ describe('the idempotency key', () => {
     // key would have minted a new one here and held the night twice.
     expect(second.statusCode).toBe(201)
     expect(second.json().id).toBe(first.json().id)
+
+    // Distinguishes a guard that returns the stored row from one that inserted a second one
+    // anyway and got lucky on the response it happened to send back.
+    const rows = await getTestDb()
+      .selectFrom('booking_details')
+      .selectAll()
+      .where('engine_booking_id', '=', first.json().id)
+      .execute()
+    expect(rows).toHaveLength(1)
   })
 
   it('refuses a request with no idempotency key', async () => {
@@ -235,5 +244,34 @@ describe('the idempotency key', () => {
     // Required rather than optional: there is one client, and an optional key degrades
     // silently into exactly the unsafe retry it exists to prevent.
     expect(response.statusCode).toBe(400)
+  })
+
+  // Core mechanism, not an edge case: this is exactly how the orphan from "leaves the engine
+  // booking in place when the local write fails" gets repaired when the owner's client retries.
+  it('heals an orphan by replaying into it, rather than refusing or duplicating it', async () => {
+    const body = booking()
+    const created = await post(body)
+    expect(created.statusCode).toBe(201)
+    const id = created.json().id as string
+
+    // Simulates the earlier attempt: the engine call landed and the night is held, but the
+    // local insert never happened (or, here, is undone) — the orphan the design accepts as the
+    // safe failure over losing the night.
+    await getTestDb().deleteFrom('booking_details').where('engine_booking_id', '=', id).execute()
+
+    const healed = await post(body)
+
+    expect(healed.statusCode).toBe(201)
+    expect(healed.json().id).toBe(id)
+    expect(healed.json().guest).toMatchObject({ name: 'Иван', phone: '+79123456789' })
+    // 2 × 30000 + 5000, the same total the original request asked for.
+    expect(healed.json().total).toBe(65000)
+
+    const rows = await getTestDb()
+      .selectFrom('booking_details')
+      .selectAll()
+      .where('engine_booking_id', '=', id)
+      .execute()
+    expect(rows).toHaveLength(1)
   })
 })

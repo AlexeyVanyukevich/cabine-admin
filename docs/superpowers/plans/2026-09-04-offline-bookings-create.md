@@ -87,7 +87,7 @@ Create `tests/ui/offline-shell.spec.ts`:
 
 ```ts
 import { expect, test } from '@playwright/test'
-import { resetAppDb, setOwnerPassword } from './helpers'
+import { appUrl, resetAppDb, seedHouse, setOwnerPassword } from './helpers.js'
 
 test.beforeEach(async () => {
   await resetAppDb()
@@ -95,7 +95,7 @@ test.beforeEach(async () => {
 })
 
 test('the app shell still renders with the network cut', async ({ page, context }) => {
-  await page.goto('/')
+  await page.goto(appUrl('/'))
 
   // The shell is only precached once the worker has activated; without this the reload below
   // races registration and fails intermittently rather than meaningfully.
@@ -109,12 +109,33 @@ test('the app shell still renders with the network cut', async ({ page, context 
 })
 
 test('an API call is never served from the cache', async ({ page, context }) => {
-  await page.goto('/')
-  await page.waitForFunction(() => navigator.serviceWorker.controller !== null)
-  await context.setOffline(true)
+  await seedHouse()
+  await page.goto(appUrl('/'))
 
-  // NetworkOnly means the request fails rather than answering from a cache. A cached
-  // /api/calendar would be the "everything is free" failure the fourth invariant forbids.
+  // Signing in must happen only once the worker controls this page: a request made before
+  // that point never reaches the worker's fetch handler at all, and the assertion below would
+  // pass for the wrong reason.
+  await page.waitForFunction(() => navigator.serviceWorker.controller !== null)
+
+  await page.getByLabel('Пароль').fill(PASSWORD)
+  const calendarLoaded = page.waitForResponse(
+    (response) => response.url().includes('/api/calendar') && response.status() === 200,
+  )
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await calendarLoaded
+
+  // A *successful* request has to happen first, or there was never anything to cache and the
+  // assertion passes under any handler at all. `caches.match` searches every Cache Storage
+  // entry the origin owns; `ignoreSearch` makes the query string irrelevant. Under CacheFirst
+  // this finds the response and fails, which is the discriminating power the test exists for.
+  const cached = await page.evaluate(async () => {
+    const hit = await caches.match('/api/calendar', { ignoreSearch: true })
+    return hit !== undefined
+  })
+  expect(cached).toBe(false)
+
+  // Secondary: offline, the same endpoint throws rather than answering from a cache.
+  await context.setOffline(true)
   const status = await page.evaluate(async () => {
     try {
       const response = await fetch('/api/calendar?from=2026-09-01&to=2026-10-01')

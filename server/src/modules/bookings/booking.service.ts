@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto'
 import type { AddonSnapshot } from '../../db/schema.js'
 import type { EngineBooking, EngineClient } from '../../engine/client.js'
 import { NotFoundError, ValidationError } from '../../shared/errors.js'
@@ -49,6 +48,8 @@ export interface CreateBookingInput {
   addons?: Array<{ code: string }>
   deposit?: number
   note?: string
+  idempotency_key: string
+  currency: string
 }
 
 export class BookingService {
@@ -101,20 +102,32 @@ export class BookingService {
 
     const { guest } = await this.guests.findOrCreate(body.guest)
 
-    // Read once, here, and written onto the row: the booking records what it was agreed in,
-    // so changing the setting afterwards cannot reinterpret it.
-    const currency = await this.settings.currentCurrency()
+    // Taken from the request, not from settings. The booking records what it was agreed in,
+    // and for one captured offline that agreement happened before this request was sent.
+    const currency = body.currency
 
     // The engine first, always. If the write below fails, a booking exists whose guest details
     // are missing: the night is correctly held and the calendar shows it as an orphan for the
     // owner to repair. The reverse order can leave a row for a booking that does not hold the
     // night, which is how two guests end up in one house.
+    //
+    // The key is the client's. A retry after a lost answer replays the same one and gets the
+    // same booking back; a key minted here would have made a second.
     const engineBooking = await this.engine.createBooking(
       house.engine_resource_id,
       body.check_in,
       body.check_out,
-      randomUUID(),
+      body.idempotency_key,
     )
+
+    // A replayed key comes back from the engine as the booking already made, not a new one.
+    // Details for it may already sit on this row from the attempt whose answer was lost, so
+    // inserting unconditionally would collide on `engine_booking_id` — the row is the answer,
+    // not a duplicate to make.
+    const existing = await this.repository.byEngineId(engineBooking.id)
+    if (existing !== undefined) {
+      return this.viewFromRow(engineBooking, house, guest, existing)
+    }
 
     await this.repository.insert({
       engine_booking_id: engineBooking.id,

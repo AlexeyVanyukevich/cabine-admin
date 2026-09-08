@@ -29,10 +29,15 @@ export function NewBooking({ house, checkIn, checkOut, onCancel, onSaved }: Prop
   const [error, setError] = useState<string | undefined>()
   const [busy, setBusy] = useState(false)
 
-  // A booking being made now is priced in the currency in force now; the server snapshots
-  // that same code onto the row, so what is shown here is what the booking will keep.
+  // A booking being made now is priced in the currency in force now; the client sends that
+  // same code with the request, so what is shown here is what the booking will keep.
   const settings = useSettings()
   const currency = settings.data?.currency ?? { code: '', symbol: '' }
+
+  // Minted once and held for the life of this sheet, not per submit: a lost answer followed by
+  // a retry must replay the same key, or the engine sees two different attempts and holds the
+  // night twice. See `web/src/offline/intents.ts` — the same rule for the offline queue.
+  const [idempotencyKey] = useState(() => crypto.randomUUID())
 
   const priceMinor = toMinor(price)
   const depositMinor = deposit.trim() === '' ? 0 : toMinor(deposit)
@@ -56,7 +61,7 @@ export function NewBooking({ house, checkIn, checkOut, onCancel, onSaved }: Prop
         price_per_night: priceMinor,
         addons: chosen.map((code) => ({ code })),
         deposit: depositMinor,
-        idempotency_key: crypto.randomUUID(),
+        idempotency_key: idempotencyKey,
         currency: currency.code,
         ...(note.trim() === '' ? {} : { note }),
       })
@@ -77,7 +82,14 @@ export function NewBooking({ house, checkIn, checkOut, onCancel, onSaved }: Prop
           <button className="btn btn--quiet" type="button" onClick={onCancel}>
             Отмена
           </button>
-          <button className="btn btn--primary" type="submit" form={FORM} disabled={busy}>
+          <button
+            className="btn btn--primary"
+            type="submit"
+            form={FORM}
+            // Submitting before settings has ever loaded would send an empty currency code,
+            // which the schema rejects — a confusing 400 rather than a clear, disabled button.
+            disabled={busy || settings.data === undefined}
+          >
             {busy ? 'Сохраняем…' : 'Сохранить'}
           </button>
         </div>

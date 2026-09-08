@@ -1120,7 +1120,28 @@ const engineBooking = await this.engine.createBooking(
   body.check_out,
   body.idempotency_key,
 )
+
+// A replayed key comes back from the engine as the booking already made, not a new one.
+// Details for it may already sit on this row from the attempt whose answer was lost, so
+// inserting unconditionally would collide on `engine_booking_id` — the row is the answer,
+// not a duplicate to make. When no row is found the insert below runs and heals an orphan:
+// an attempt whose engine call landed and whose local write did not.
+const existing = await this.repository.byEngineId(engineBooking.id)
+if (existing !== undefined) {
+  return this.viewFromRow(engineBooking, house, guest, existing)
+}
 ```
+
+**Without that guard the whole task is defeated.** The engine answers a replay with the booking it
+already made, so an unconditional insert violates the `engine_booking_id` unique constraint and the
+client receives a 500 — from a request that did hold the night. The retry safety the client key
+exists to provide only works if the replay path returns the stored row.
+
+**And the key must be minted where it survives a retry.** In the form it belongs at component
+scope, not inside the submit handler: `const [idempotencyKey] = useState(() => crypto.randomUUID())`.
+A key minted inside `submit()` is re-minted on every click, so a failed attempt whose request
+actually reached the engine is retried under a new key and the night is held twice — the precise
+failure this task exists to prevent.
 
 Remove the now-unused `randomUUID` import if nothing else in the file uses it, and drop the `settings.currentCurrency()` call from `create()`. Leave `SettingsService` injected — other methods and the constructor signature stay as they are.
 

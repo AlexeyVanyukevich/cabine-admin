@@ -148,9 +148,10 @@ error as unreachability.
 
 ### Idempotency
 
-`createBooking` takes an idempotency key, minted per attempt by the booking service. The engine
-answers a replay with `200` instead of `201`, so a dropped connection cannot produce a second
-booking on the same nights.
+`createBooking` takes an idempotency key. It comes from the client and is forwarded to the
+engine unchanged, rather than minted per attempt: a request whose answer was lost and then
+retried carries the same key, so the engine answers the replay with the booking it already made
+instead of holding the night a second time.
 
 ### What the facade does not do
 
@@ -198,10 +199,12 @@ rejects a non-integer. Whole units are converted exactly once, at the edge of an
 
 **The currency is a setting, and also a snapshot.** `settings.currency` is what a price entered
 now means; `booking_details.currency` is what a booking already made meant, and nothing rewrites
-it — the same argument as `price_per_night`, for the same reason. Switching the setting converts
-nothing: 65000 stays 65000 and starts rendering with another symbol, so the owner re-prices the
-houses afterwards. The alternative, an FX rate applied on read, would make a settled total drift
-with the market.
+it — the same argument as `price_per_night`, for the same reason. Creation does not read the
+setting at all: the request carries the currency the booking was agreed in, validated against
+the same table the setting draws from, and that value is what gets stored. Switching the setting
+converts nothing: 65000 stays 65000 and starts rendering with another symbol, so the owner
+re-prices the houses afterwards. The alternative, an FX rate applied on read, would make a
+settled total drift with the market.
 
 The list of currencies lives in `server/src/shared/currency.ts` and is served to the browser by
 `GET /api/settings`; the web workspace keeps no copy, because a second copy of that table drifts
@@ -240,11 +243,16 @@ not a certainty.
    reaches the engine. The pure helpers throw plain `Error`s, and this is where they become a
    `400` rather than a `500` — an inverted date range is a typo, not a fault of ours.
 3. Find or create the guest by normalised phone.
-4. **Call the engine.** A fresh idempotency key per attempt.
-5. Insert `booking_details`.
+4. **Call the engine**, forwarding the idempotency key the client sent.
+5. If `booking_details` already holds a row for the booking the engine just returned, that is a
+   replay: the earlier attempt's answer was lost, but its write here landed, so the stored row is
+   the answer and nothing is inserted again.
+6. Otherwise, insert `booking_details`.
 
-If step 5 fails, a booking exists whose guest details are missing: the night is correctly held
-and the calendar shows it as an orphan for the owner to repair.
+If step 6 fails, a booking exists whose guest details are missing: the night is correctly held
+and the calendar shows it as an orphan for the owner to repair. Step 5 is also how that orphan
+gets healed: replaying the same key after the engine call succeeded but the insert did not
+finds no row, falls through to the insert, and the booking has its details from then on.
 
 The hold flow — `hold: true`, write locally, then confirm — was rejected. A freed night is the
 worse outcome: the owner saw an error, assumed they would redo it, and ten minutes later the
@@ -485,28 +493,28 @@ outlive the key it belongs to.
 Every route is under `/api`. Bodies are TypeBox with `additionalProperties: false` — unknown
 fields are rejected, never ignored. Errors keep the shape `{ error, message, details? }`.
 
-| Route                               | Notes                                                         |
-| ----------------------------------- | ------------------------------------------------------------- |
-| `GET /api/health`                   | Public                                                        |
-| `POST /api/login`                   | Public, rate-limited per IP. Sets the session cookie, `204`   |
-| `POST /api/logout`                  | Clears it, `204`                                              |
-| `GET /api/me`                       | The session check the SPA uses                                |
-| `GET /api/calendar?from&to`         | Both houses' nights and bookings, assembled from both systems |
-| `POST /api/bookings`                | Engine first. `201`                                           |
-| `GET /api/bookings/:id`             | By `engine_booking_id`                                        |
-| `POST /api/bookings/:id/reschedule` | Engine only                                                   |
-| `POST /api/bookings/:id/cancel`     | Engine only                                                   |
-| `PATCH /api/bookings/:id`           | Deposit and note. This database only                          |
-| `GET /api/houses`                   | Check-in read from the engine, best-effort                    |
-| `POST /api/houses`                  | Verifies the resource exists and is not already claimed       |
-| `PATCH /api/houses/:id`             | Name, price, check-out time, add-on price list                |
-| `GET /api/settings`                 | The currency in force, and the list on offer                  |
-| `PATCH /api/settings`               | Changes the currency. Converts nothing                        |
-| `GET /api/guests?phone`             | Lookup by normalised phone                                    |
-| `GET /api/guests/:id`               |                                                               |
-| `GET /api/guests/:id/bookings`      | History, newest first                                         |
-| `POST /api/guests`                  |                                                               |
-| `PATCH /api/guests/:id`             |                                                               |
+| Route                               | Notes                                                                                 |
+| ----------------------------------- | ------------------------------------------------------------------------------------- |
+| `GET /api/health`                   | Public                                                                                |
+| `POST /api/login`                   | Public, rate-limited per IP. Sets the session cookie, `204`                           |
+| `POST /api/logout`                  | Clears it, `204`                                                                      |
+| `GET /api/me`                       | The session check the SPA uses                                                        |
+| `GET /api/calendar?from&to`         | Both houses' nights and bookings, assembled from both systems                         |
+| `POST /api/bookings`                | Engine first, `201`. A replayed idempotency key answers with the booking already made |
+| `GET /api/bookings/:id`             | By `engine_booking_id`                                                                |
+| `POST /api/bookings/:id/reschedule` | Engine only                                                                           |
+| `POST /api/bookings/:id/cancel`     | Engine only                                                                           |
+| `PATCH /api/bookings/:id`           | Deposit and note. This database only                                                  |
+| `GET /api/houses`                   | Check-in read from the engine, best-effort                                            |
+| `POST /api/houses`                  | Verifies the resource exists and is not already claimed                               |
+| `PATCH /api/houses/:id`             | Name, price, check-out time, add-on price list                                        |
+| `GET /api/settings`                 | The currency in force, and the list on offer                                          |
+| `PATCH /api/settings`               | Changes the currency. Converts nothing                                                |
+| `GET /api/guests?phone`             | Lookup by normalised phone                                                            |
+| `GET /api/guests/:id`               |                                                                                       |
+| `GET /api/guests/:id/bookings`      | History, newest first                                                                 |
+| `POST /api/guests`                  |                                                                                       |
+| `PATCH /api/guests/:id`             |                                                                                       |
 
 ---
 

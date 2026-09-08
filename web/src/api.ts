@@ -25,6 +25,14 @@ export class ApiError extends Error {
 /** Raised on a 401 so the router can show the login screen instead of a broken page. */
 export class NotSignedIn extends ApiError {}
 
+/**
+ * True only when the request never reached the server. A 500 was answered by a server that is
+ * up, and queueing it would hide a real fault behind a "saved offline" notice.
+ */
+export function isOffline(cause: unknown): boolean {
+  return cause instanceof ApiError && cause.code === 'offline'
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   let response: Response
   try {

@@ -31,9 +31,13 @@ const COPY: Record<string, string> = {
   hold_expired: 'Бронь не была подтверждена вовремя. Заведите её заново.',
   invalid_interval: 'Проверьте даты заезда и выезда.',
 
-  // The queue's own vocabulary. Not server codes — these are raised here.
+  // This exact booking was already sent once with different details — usually an edit resaved
+  // after its first answer never arrived. Obey the freeze: reload rather than resending.
+  idempotency_key_reused:
+    'Эта бронь уже отправлена с другими данными. Обновите страницу, чтобы увидеть, что сохранилось.',
+
+  // The queue's own vocabulary. Not a server code — raised here.
   queued: 'Нет сети. Бронь сохранена на телефоне и уйдёт, когда появится связь.',
-  idempotency_key_reused: 'Эта бронь уже отправлялась. Дождитесь ответа сервера.',
 }
 
 const GENERIC = 'Что-то пошло не так. Попробуйте ещё раз.'

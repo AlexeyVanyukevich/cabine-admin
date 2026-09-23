@@ -1408,7 +1408,7 @@ git commit -m "feat(web): serve the last good read under a staleness stamp when 
 **Interfaces:**
 
 - Consumes: `isOffline` (Task 6), `newCreateIntent` (Task 3), `putIntent` (Task 2)
-- Produces: `captureOrPost(payload, currency, deps): Promise<'sent' | 'queued'>` from `web/src/offline/capture.ts`
+- Produces: `captureOrPost(payload, currency, idempotencyKey, deps): Promise<'sent' | 'queued'>` from `web/src/offline/capture.ts`. The key is the caller's — see the note under Step 3.
 
 The decision of what to do with a failed save is pulled out of the component so it can be tested without rendering React.
 
@@ -1421,6 +1421,9 @@ import { describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../src/api'
 import { captureOrPost } from '../src/offline/capture'
 import type { CreatePayload } from '../src/offline/intents'
+
+// The form holds one of these per sheet opening, so a retry replays it rather than minting anew.
+const KEY = '33333333-3333-4333-8333-333333333333'
 
 const PAYLOAD: CreatePayload = {
   house_id: '22222222-2222-4222-8222-222222222222',
@@ -1437,7 +1440,7 @@ describe('captureOrPost', () => {
     const post = vi.fn().mockResolvedValue({ id: 'engine-1' })
     const save = vi.fn()
 
-    expect(await captureOrPost(PAYLOAD, 'RUB', { post, save })).toBe('sent')
+    expect(await captureOrPost(PAYLOAD, 'RUB', KEY, { post, save })).toBe('sent')
     expect(save).not.toHaveBeenCalled()
 
     // The key travels with the request so a retry of this very call cannot double-book.
@@ -1449,7 +1452,7 @@ describe('captureOrPost', () => {
     const post = vi.fn().mockRejectedValue(new ApiError('offline', 0, 'Нет связи'))
     const save = vi.fn()
 
-    expect(await captureOrPost(PAYLOAD, 'RUB', { post, save })).toBe('queued')
+    expect(await captureOrPost(PAYLOAD, 'RUB', KEY, { post, save })).toBe('queued')
     expect(save).toHaveBeenCalledOnce()
     expect(save.mock.calls[0]?.[0]).toMatchObject({
       payload: PAYLOAD,
@@ -1462,7 +1465,7 @@ describe('captureOrPost', () => {
     const post = vi.fn().mockRejectedValue(new ApiError('offline', 0, 'Нет связи'))
     const save = vi.fn()
 
-    await captureOrPost(PAYLOAD, 'RUB', { post, save })
+    await captureOrPost(PAYLOAD, 'RUB', KEY, { post, save })
 
     // Otherwise a request that did reach the engine before the connection dropped would be
     // replayed later under a different key, and hold the night twice.
@@ -1473,7 +1476,7 @@ describe('captureOrPost', () => {
     const post = vi.fn().mockRejectedValue(new ApiError('offline', 0, 'Нет связи'))
     const save = vi.fn()
 
-    await captureOrPost(PAYLOAD, 'RUB', { post, save })
+    await captureOrPost(PAYLOAD, 'RUB', KEY, { post, save })
     expect(save.mock.calls[0]?.[0].attempted).toBe(true)
   })
 
@@ -1482,7 +1485,7 @@ describe('captureOrPost', () => {
     const save = vi.fn()
 
     // The night is genuinely taken and the owner must see that now, not in a queue.
-    await expect(captureOrPost(PAYLOAD, 'RUB', { post, save })).rejects.toThrow()
+    await expect(captureOrPost(PAYLOAD, 'RUB', KEY, { post, save })).rejects.toThrow()
     expect(save).not.toHaveBeenCalled()
   })
 })

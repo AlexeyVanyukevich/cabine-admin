@@ -30,6 +30,10 @@ const COPY: Record<string, string> = {
   invalid_state_transition: 'С этой бронью такое действие уже недоступно.',
   hold_expired: 'Бронь не была подтверждена вовремя. Заведите её заново.',
   invalid_interval: 'Проверьте даты заезда и выезда.',
+
+  // The queue's own vocabulary. Not server codes — these are raised here.
+  queued: 'Нет сети. Бронь сохранена на телефоне и уйдёт, когда появится связь.',
+  idempotency_key_reused: 'Эта бронь уже отправлялась. Дождитесь ответа сервера.',
 }
 
 const GENERIC = 'Что-то пошло не так. Попробуйте ещё раз.'

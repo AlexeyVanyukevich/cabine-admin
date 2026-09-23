@@ -1333,28 +1333,35 @@ export function useCachedQuery<T>(
     }
   }, [failed, cacheKey])
 
-  if (query.data !== undefined) {
-    return {
-      data: query.data,
-      fetchedAt: undefined,
-      stale: false,
-      error: null,
-      isPending: false,
-      refetch: () => void client.invalidateQueries({ queryKey }),
-    }
-  }
-
-  return {
-    data: fallback?.value,
-    fetchedAt: fallback?.fetchedAt,
-    stale: fallback !== undefined,
-    // A cache that answered is not an error the screen should render over; the stamp says it.
-    error: fallback === undefined ? query.error : null,
-    isPending: query.isPending && fallback === undefined,
-    refetch: () => void client.invalidateQueries({ queryKey }),
-  }
+  // Four ordered branches. Extract them into a pure function and unit-test it: the ordering is
+  // the whole correctness of this hook and it cannot be exercised without a React renderer.
+  //
+  // 1. !failed && data !== undefined  -> fresh: data, no fetchedAt, stale false, no error
+  // 2. failed && fallback !== undefined -> stale: the cached value WITH its fetchedAt, error hidden
+  // 3. failed && !fallbackChecked     -> pending: the cache read is still in flight
+  // 4. otherwise                      -> surface the error
+  return resolveCachedQuery({
+    failed,
+    data: query.data,
+    fallback,
+    fallbackChecked,
+    error: query.error,
+  })
 }
 ```
+
+**Branch 1 must be gated on `!failed`, and this is not a detail.** TanStack Query's error reducer
+spreads `...state` and never clears `data`, so `data` and `error` coexist after a failed refetch.
+Returning early on `query.data !== undefined` therefore fires on every failure that follows an
+earlier success — the owner loads the calendar, loses signal, a focus-refetch fails — and hands
+back the old in-memory grid reported as `stale: false` with no `fetchedAt`. That is an unstamped
+stale availability grid, which is the "everything is free" failure the fourth invariant forbids and
+the exact outcome the no-cache decision was protecting against. The stamp is the only thing making
+this cache defensible; a path that bypasses it reinstates the rejected design.
+
+Branch 3 exists so that going offline does not flash an error for one frame before the stale grid
+appears. And `readCache` needs a `.catch` that still marks the read checked, or an IndexedDB
+failure leaves the hook pending forever.
 
 - [ ] **Step 6: Correct the query defaults and their comment**
 
@@ -1507,9 +1514,13 @@ export interface CaptureDeps {
 export async function captureOrPost(
   payload: CreatePayload,
   currency: string,
+  idempotencyKey: string,
   deps: CaptureDeps,
 ): Promise<'sent' | 'queued'> {
-  const intent = newCreateIntent(payload, currency)
+  // The key comes from the caller, never minted here. The form holds one per sheet opening so a
+  // retry after a lost answer replays it; minting inside this function would give every retry a
+  // fresh key and let the engine hold the night twice.
+  const intent = { ...newCreateIntent(payload, currency), id: idempotencyKey }
 
   try {
     await deps.post('/api/bookings', {

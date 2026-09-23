@@ -34,6 +34,58 @@ export interface CachedQuery<T> {
   refetch: () => void
 }
 
+type Resolved<T> = Omit<CachedQuery<T>, 'refetch'>
+
+interface ResolveInput<T> {
+  /** `query.error != null` — a fetch for this key has failed and not yet been superseded. */
+  failed: boolean
+  data: T | undefined
+  fallback: { value: T; fetchedAt: string } | undefined
+  /** Whether the IndexedDB read that fills `fallback` after a failure has settled. */
+  fallbackChecked: boolean
+  error: unknown
+  isPending: boolean
+}
+
+/**
+ * The branch selection lives outside the hook so it can be unit-tested without a renderer:
+ * this repo has no React Testing Library, but the ordering below is exactly the load-bearing
+ * decision the staleness stamp depends on, so it does not ship unproven.
+ *
+ * Order matters:
+ * 1. A fetch that has not failed, with data in hand, is genuinely fresh.
+ * 2. A failed fetch with a cache entry renders that entry, under its stamp, error suppressed.
+ * 3. A failed fetch whose cache read has not yet settled stays pending rather than flashing an
+ *    error a moment before it turns into a stale grid.
+ * 4. Otherwise the fetch failed and there is nothing to stamp: surface the error. In-memory
+ *    `data` from a prior success is deliberately not shown here — it carries no `fetchedAt`, so
+ *    it cannot be rendered honestly under a stamp, and an explicit error is not the empty grid
+ *    the calendar must never show.
+ */
+export function resolveCachedQuery<T>(input: ResolveInput<T>): Resolved<T> {
+  const { failed, data, fallback, fallbackChecked, error, isPending } = input
+
+  if (!failed && data !== undefined) {
+    return { data, fetchedAt: undefined, stale: false, error: null, isPending: false }
+  }
+
+  if (failed && fallback !== undefined) {
+    return {
+      data: fallback.value,
+      fetchedAt: fallback.fetchedAt,
+      stale: true,
+      error: null,
+      isPending: false,
+    }
+  }
+
+  if (failed && !fallbackChecked) {
+    return { data: undefined, fetchedAt: undefined, stale: false, error: null, isPending: true }
+  }
+
+  return { data: undefined, fetchedAt: undefined, stale: false, error, isPending }
+}
+
 /**
  * A read that survives losing the network: the answer is written to IndexedDB on every
  * success, and served from there — explicitly stamped as stale — when the server cannot be
@@ -42,6 +94,12 @@ export interface CachedQuery<T> {
  * The stamp is not decoration. Slice 1 rejected an availability cache because a stale grid
  * "would tell the same lie more convincingly", and that reasoning still holds for a cache that
  * claims to be current. This one never claims it.
+ *
+ * `query.data` alone cannot gate freshness: `@tanstack/query-core`'s reducer keeps the last
+ * successful `data` around through a subsequent failed fetch (its `"error"` case never clears
+ * it), so `data` and `error` coexist on the query after a success-then-offline sequence. Gating
+ * on `failed` as well, via `resolveCachedQuery`, is what keeps that in-memory leftover from
+ * being served as if it were current.
  */
 export function useCachedQuery<T>(
   cacheKey: string,
@@ -50,6 +108,7 @@ export function useCachedQuery<T>(
 ): CachedQuery<T> {
   const client = useQueryClient()
   const [fallback, setFallback] = useState<{ value: T; fetchedAt: string } | undefined>()
+  const [fallbackChecked, setFallbackChecked] = useState(false)
 
   const query = useQuery({
     queryKey,
@@ -65,35 +124,37 @@ export function useCachedQuery<T>(
   useEffect(() => {
     if (!failed) {
       setFallback(undefined)
+      setFallbackChecked(false)
       return
     }
     let live = true
-    void readCache<T>(cacheKey).then((entry) => {
-      if (live && entry !== undefined) setFallback(entry)
-    })
+    readCache<T>(cacheKey)
+      .then((entry) => {
+        if (!live) return
+        setFallback(entry)
+        setFallbackChecked(true)
+      })
+      .catch(() => {
+        // An IndexedDB failure (quota, private browsing) still has to resolve the "is the cache
+        // checked yet" question, or branch 3 above would leave the hook pending forever.
+        if (!live) return
+        setFallback(undefined)
+        setFallbackChecked(true)
+      })
     return () => {
       live = false
     }
   }, [failed, cacheKey])
 
-  if (query.data !== undefined) {
-    return {
-      data: query.data,
-      fetchedAt: undefined,
-      stale: false,
-      error: null,
-      isPending: false,
-      refetch: () => void client.invalidateQueries({ queryKey }),
-    }
-  }
-
   return {
-    data: fallback?.value,
-    fetchedAt: fallback?.fetchedAt,
-    stale: fallback !== undefined,
-    // A cache that answered is not an error the screen should render over; the stamp says it.
-    error: fallback === undefined ? query.error : null,
-    isPending: query.isPending && fallback === undefined,
+    ...resolveCachedQuery({
+      failed,
+      data: query.data,
+      fallback,
+      fallbackChecked,
+      error: query.error,
+      isPending: query.isPending,
+    }),
     refetch: () => void client.invalidateQueries({ queryKey }),
   }
 }

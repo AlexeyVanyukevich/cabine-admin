@@ -1605,9 +1605,15 @@ interface Props {
 In `web/src/errors.ts`, add to `COPY`:
 
 ```ts
-  // The queue's own vocabulary. Not server codes — these are raised here.
+  // Engine vocabulary, alongside `slot_unavailable` and the rest. `idempotency_key_reused` must
+  // also be added to OWNER_FACING in `server/src/engine/errors.ts`, or the server masks it as
+  // `engine_rejected_our_key` and the owner is told a configuration fault is "not yours" — when
+  // in fact they edited an already-sent booking and are the only one who can resolve it.
+  idempotency_key_reused:
+    'Эта бронь уже отправлена с другими данными. Обновите страницу, чтобы увидеть, что сохранилось.',
+
+  // The queue's own vocabulary. Not a server code — this one is raised here.
   queued: 'Нет сети. Бронь сохранена на телефоне и уйдёт, когда появится связь.',
-  idempotency_key_reused: 'Эта бронь уже отправлялась. Дождитесь ответа сервера.',
 ```
 
 - [ ] **Step 7: Update the caller so the app still compiles**

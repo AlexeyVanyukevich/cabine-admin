@@ -1767,7 +1767,9 @@ describe('runSync', () => {
 
     expect(await runSync(context)).toBe('conflicts')
     expect(context.dropped).toEqual([])
-    expect(context.saved[0]).toMatchObject({
+    // A non-success intent is written twice: once as sending before the request leaves, once
+    // as resolved. The outcome that matters here is the last one recorded.
+    expect(context.saved.at(-1)).toMatchObject({
       state: 'conflict',
       lastError: { code: 'slot_unavailable' },
     })
@@ -1782,7 +1784,8 @@ describe('runSync', () => {
 
     expect(await runSync(context)).toBe('offline')
     expect(context.dropped).toEqual([])
-    expect(context.saved[0]?.state).toBe('pending')
+    // Written as sending first, then back to pending. The last write is the resting state.
+    expect(context.saved.at(-1)?.state).toBe('pending')
   })
 
   it('retries rather than conflicts on the codes the engine calls retryable', async () => {
@@ -1795,7 +1798,7 @@ describe('runSync', () => {
       const context = deps([intent], vi.fn().mockRejectedValue(new ApiError(code, status, code)))
 
       expect(await runSync(context)).toBe('offline')
-      expect(context.saved[0]?.state).toBe('pending')
+      expect(context.saved.at(-1)?.state).toBe('pending')
     }
   })
 
@@ -1820,7 +1823,10 @@ describe('runSync', () => {
     )
 
     await runSync(context)
-    expect(context.saved[0]?.attempted).toBe(true)
+    // The FIRST write, before the request leaves: attempted, and shown as sending. Distinguishing
+    // "in flight" from "tried, now waiting" is what lets the tray avoid calling a booking that is
+    // sitting on the phone "Отправляется".
+    expect(context.saved[0]).toMatchObject({ attempted: true, state: 'syncing' })
   })
 
   it('skips intents already parked as conflicts', async () => {

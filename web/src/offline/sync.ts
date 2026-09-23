@@ -47,10 +47,10 @@ export async function runSync(deps: SyncDeps): Promise<SyncOutcome> {
 
     // Recorded before the request leaves, so a connection lost mid-flight — or an edit from
     // another tab — still finds the payload frozen. The engine refuses this key with a
-    // different body afterwards. State is left as pending: that is already where a retry or a
-    // paused queue should resume from, so nothing more needs writing unless the outcome says
-    // otherwise.
-    const attempt: Intent = { ...intent, attempted: true }
+    // different body afterwards. `syncing` is what lets the tray tell "sending right now"
+    // apart from "tried, and now waiting" — collapsing it into `pending` here would make that
+    // distinction unrecoverable once the request settles.
+    const attempt: Intent = { ...intent, state: 'syncing', attempted: true }
     await deps.save(attempt)
 
     try {
@@ -64,18 +64,18 @@ export async function runSync(deps: SyncDeps): Promise<SyncOutcome> {
     } catch (cause) {
       if (cause instanceof NotSignedIn) {
         // Park this one and stop. Everything behind it would earn the same 401, and the owner
-        // has to sign in before any of it can move. The frozen record already says pending.
+        // has to sign in before any of it can move.
+        await deps.save({ ...attempt, state: 'pending' })
         return 'paused'
       }
 
       if (isOffline(cause) || (cause instanceof ApiError && RETRYABLE.has(cause.code))) {
-        // The frozen record already says pending; nothing changed that needs a second write.
+        await deps.save({ ...attempt, state: 'pending' })
         deferred = true
         continue
       }
 
-      // The server has spoken, so the pending freeze no longer describes this intent — the
-      // only case in the loop where a second write is unavoidable.
+      // The server has spoken, so the pending freeze no longer describes this intent.
       await deps.save({
         ...attempt,
         state: 'conflict',

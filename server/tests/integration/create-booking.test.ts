@@ -102,6 +102,17 @@ describe('POST /api/bookings', () => {
     expect(clash.json().error).toBe('slot_unavailable')
   })
 
+  // The owner's own doing — editing and resaving a booking whose first answer never arrived —
+  // not a defect here, so it must reach them as such rather than as a masked configuration fault.
+  it('forwards a replayed key with a different booking as something the owner can act on', async () => {
+    const key = randomUUID()
+    await post(booking({ idempotency_key: key }))
+    const replay = await post(booking({ idempotency_key: key }))
+
+    expect(replay.statusCode).toBe(409)
+    expect(replay.json().error).toBe('idempotency_key_reused')
+  })
+
   it('lets a stay begin on the previous departure date', async () => {
     const first = booking()
     await post(first)

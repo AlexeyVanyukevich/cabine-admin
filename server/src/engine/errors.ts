@@ -40,6 +40,10 @@ const OWNER_FACING = new Set([
   'invalid_state_transition',
   'hold_expired',
   'invalid_interval',
+  // The owner resubmitted a booking already sent under the same key, usually by editing and
+  // saving one that had already gone out. Masking it as a configuration fault would send them
+  // looking for a bug instead of reloading to see what actually went through.
+  'idempotency_key_reused',
 ])
 
 export function isRetryable(error: EngineError): boolean {

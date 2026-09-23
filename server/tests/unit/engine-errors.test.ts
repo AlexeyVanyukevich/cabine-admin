@@ -27,7 +27,13 @@ describe('isOwnerFacing', () => {
     },
   )
 
-  it.each(['invalid_slot_boundary', 'idempotency_key_reused', 'validation_error'])(
+  // Resubmitting a booking already sent under the same key is the owner's own doing — editing
+  // and re-saving one whose first answer never arrived — not a defect on our side.
+  it('idempotency_key_reused is something to show the owner', () => {
+    expect(isOwnerFacing(error('idempotency_key_reused', 409))).toBe(true)
+  })
+
+  it.each(['invalid_slot_boundary', 'validation_error'])(
     '%s is a defect on our side, not the owner’s problem',
     (code) => {
       expect(isOwnerFacing(error(code, 400))).toBe(false)

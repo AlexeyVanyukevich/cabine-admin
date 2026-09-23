@@ -5,6 +5,8 @@ import { nightsBetween } from '../calendar/nights'
 import { money, toMinor } from '../money'
 import { useSettings } from '../settings'
 import { messageFor } from '../errors'
+import { captureOrPost } from '../offline/capture'
+import { putIntent } from '../offline/db'
 
 /** Ties the pinned Save button to the form it submits, which is no longer its ancestor. */
 const FORM = 'new-booking'
@@ -14,7 +16,7 @@ interface Props {
   checkIn: string
   checkOut: string
   onCancel: () => void
-  onSaved: () => void
+  onSaved: (outcome: 'sent' | 'queued') => void
 }
 
 export function NewBooking({ house, checkIn, checkOut, onCancel, onSaved }: Props) {
@@ -53,19 +55,22 @@ export function NewBooking({ house, checkIn, checkOut, onCancel, onSaved }: Prop
     setBusy(true)
     setError(undefined)
     try {
-      await api.post('/api/bookings', {
-        house_id: house.id,
-        check_in: checkIn,
-        check_out: checkOut,
-        guest: { name, phone },
-        price_per_night: priceMinor,
-        addons: chosen.map((code) => ({ code })),
-        deposit: depositMinor,
-        idempotency_key: idempotencyKey,
-        currency: currency.code,
-        ...(note.trim() === '' ? {} : { note }),
-      })
-      onSaved()
+      const outcome = await captureOrPost(
+        {
+          house_id: house.id,
+          check_in: checkIn,
+          check_out: checkOut,
+          guest: { name, phone },
+          price_per_night: priceMinor,
+          addons: chosen.map((code) => ({ code })),
+          deposit: depositMinor,
+          ...(note.trim() === '' ? {} : { note }),
+        },
+        currency.code,
+        idempotencyKey,
+        { post: api.post, save: putIntent },
+      )
+      onSaved(outcome)
     } catch (cause) {
       setError(messageFor(cause, 'Не удалось сохранить бронь'))
     } finally {

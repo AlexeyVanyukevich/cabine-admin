@@ -40,10 +40,11 @@ export function Calendar() {
   }, [])
 
   /** Nothing is optimistic: the calendar is refetched, because a stale one costs money. */
-  async function refresh() {
+  async function refresh(outcome: 'sent' | 'queued' = 'sent') {
     setOpen(undefined)
     dispatch({ type: 'cancel' })
-    await queryClient.invalidateQueries({ queryKey: ['calendar'] })
+    // A queued booking has nothing new to fetch; the overlay already shows it.
+    if (outcome === 'sent') await queryClient.invalidateQueries({ queryKey: ['calendar'] })
   }
 
   const pickedHouse =
@@ -127,7 +128,7 @@ export function Calendar() {
           checkIn={selection.checkIn}
           checkOut={selection.checkOut}
           onCancel={() => dispatch({ type: 'cancel' })}
-          onSaved={() => void refresh()}
+          onSaved={(outcome) => void refresh(outcome)}
         />
       )}
 

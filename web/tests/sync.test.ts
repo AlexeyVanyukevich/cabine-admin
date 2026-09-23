@@ -86,8 +86,9 @@ describe('runSync', () => {
 
     expect(await runSync(context)).toBe('conflicts')
     expect(context.dropped).toEqual([])
-    // Two writes for this one: the pre-dispatch freeze, then the refusal. The freeze is
-    // `saved[0]`; the outcome that matters here is the last one recorded.
+    // A non-success intent is written twice: once as `syncing`, right before the request
+    // leaves, then again once the outcome is known. `saved[0]` is the sending write; the
+    // resolved write — the one that matters here — is the last one recorded.
     expect(context.saved.at(-1)).toMatchObject({
       state: 'conflict',
       lastError: { code: 'slot_unavailable' },
@@ -103,7 +104,9 @@ describe('runSync', () => {
 
     expect(await runSync(context)).toBe('offline')
     expect(context.dropped).toEqual([])
-    expect(context.saved[0]?.state).toBe('pending')
+    // Written twice: `syncing` before the request, `pending` once it's known to have failed.
+    // The resolved write is the last one recorded.
+    expect(context.saved.at(-1)?.state).toBe('pending')
   })
 
   it('retries rather than conflicts on the codes the engine calls retryable', async () => {
@@ -116,7 +119,9 @@ describe('runSync', () => {
       const context = deps([intent], vi.fn().mockRejectedValue(new ApiError(code, status, code)))
 
       expect(await runSync(context)).toBe('offline')
-      expect(context.saved[0]?.state).toBe('pending')
+      // Written twice: `syncing` before the request, `pending` once it's known to have failed.
+      // The resolved write is the last one recorded.
+      expect(context.saved.at(-1)?.state).toBe('pending')
     }
   })
 
@@ -142,6 +147,17 @@ describe('runSync', () => {
 
     await runSync(context)
     expect(context.saved[0]?.attempted).toBe(true)
+  })
+
+  it('persists the sending state before the outcome is known', async () => {
+    const intent = newCreateIntent(PAYLOAD, 'RUB')
+    const context = deps([intent], vi.fn().mockResolvedValue({ id: 'engine-1' }))
+
+    // The tray tells "sending right now" apart from "tried, and now waiting" by this state.
+    // A path where the intent goes on to resolve still has to pass through it, so it must be
+    // the very first thing written — otherwise there is no way to tell the two apart.
+    await runSync(context)
+    expect(context.saved[0]).toMatchObject({ state: 'syncing', attempted: true })
   })
 
   it('skips intents already parked as conflicts', async () => {

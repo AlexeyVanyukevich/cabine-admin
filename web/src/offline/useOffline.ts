@@ -40,12 +40,27 @@ export interface CachedQuery<T> {
 type Resolved<T> = Omit<CachedQuery<T>, 'refetch'>
 
 interface ResolveInput<T> {
+  /** The cache key THIS render is asking about. Never assume it is the one `fallback` or
+   *  `checkedKey` last resolved against — see the note on `checkedKey` below. */
+  cacheKey: string
   /** `query.error != null` — a fetch for this key has failed and not yet been superseded. */
   failed: boolean
   data: T | undefined
-  fallback: { value: T; fetchedAt: string } | undefined
-  /** Whether the IndexedDB read that fills `fallback` after a failure has settled. */
-  fallbackChecked: boolean
+  fallback: { key: string; value: T; fetchedAt: string } | undefined
+  /**
+   * The cache key the last completed IndexedDB read settled for, whether or not it found
+   * anything — `undefined` until the very first read finishes.
+   *
+   * This has to be a key, not a plain boolean. `@tanstack/react-query` can hand back a PREVIOUS
+   * key's cached error synchronously — in the same render that changes `cacheKey` back to it —
+   * before the effect that would otherwise reset `fallback`/this field for the new key has had
+   * a chance to run. A plain "have we checked" boolean would still read `true` on that render,
+   * left over from whatever key was checked last, and branch 2 below would serve THAT key's
+   * `fallback` under THIS key's stamp: a month revisited while offline rendering the PREVIOUS
+   * month's cache as its own. Comparing keys catches that on the very render it happens, rather
+   * than a tick later once an effect fires — the bad render is in the render itself.
+   */
+  checkedKey: string | undefined
   error: unknown
   isPending: boolean
 }
@@ -57,22 +72,25 @@ interface ResolveInput<T> {
  *
  * Order matters:
  * 1. A fetch that has not failed, with data in hand, is genuinely fresh.
- * 2. A failed fetch with a cache entry renders that entry, under its stamp, error suppressed.
- * 3. A failed fetch whose cache read has not yet settled stays pending rather than flashing an
- *    error a moment before it turns into a stale grid.
- * 4. Otherwise the fetch failed and there is nothing to stamp: surface the error. In-memory
- *    `data` from a prior success is deliberately not shown here — it carries no `fetchedAt`, so
- *    it cannot be rendered honestly under a stamp, and an explicit error is not the empty grid
- *    the calendar must never show.
+ * 2. A failed fetch with a cache entry FOR THIS KEY renders that entry, under its stamp, error
+ *    suppressed. A cache entry for a DIFFERENT key is never returned here, however recent —
+ *    that is a different query's answer, not this one's.
+ * 3. A failed fetch whose cache read has not yet settled FOR THIS KEY stays pending rather than
+ *    flashing an error, or a stale answer that belongs to some other key, a moment before it
+ *    turns into this key's own stale grid.
+ * 4. Otherwise the fetch failed and there is nothing to stamp for this key: surface the error.
+ *    In-memory `data` from a prior success is deliberately not shown here — it carries no
+ *    `fetchedAt`, so it cannot be rendered honestly under a stamp, and an explicit error is not
+ *    the empty grid the calendar must never show.
  */
 export function resolveCachedQuery<T>(input: ResolveInput<T>): Resolved<T> {
-  const { failed, data, fallback, fallbackChecked, error, isPending } = input
+  const { cacheKey, failed, data, fallback, checkedKey, error, isPending } = input
 
   if (!failed && data !== undefined) {
     return { data, fetchedAt: undefined, stale: false, error: null, isPending: false }
   }
 
-  if (failed && fallback !== undefined) {
+  if (failed && fallback !== undefined && fallback.key === cacheKey) {
     return {
       data: fallback.value,
       fetchedAt: fallback.fetchedAt,
@@ -82,7 +100,7 @@ export function resolveCachedQuery<T>(input: ResolveInput<T>): Resolved<T> {
     }
   }
 
-  if (failed && !fallbackChecked) {
+  if (failed && checkedKey !== cacheKey) {
     return { data: undefined, fetchedAt: undefined, stale: false, error: null, isPending: true }
   }
 
@@ -110,8 +128,10 @@ export function useCachedQuery<T>(
   fetcher: () => Promise<T>,
 ): CachedQuery<T> {
   const client = useQueryClient()
-  const [fallback, setFallback] = useState<{ value: T; fetchedAt: string } | undefined>()
-  const [fallbackChecked, setFallbackChecked] = useState(false)
+  const [fallback, setFallback] = useState<
+    { key: string; value: T; fetchedAt: string } | undefined
+  >()
+  const [checkedKey, setCheckedKey] = useState<string | undefined>()
 
   const query = useQuery({
     queryKey,
@@ -127,22 +147,22 @@ export function useCachedQuery<T>(
   useEffect(() => {
     if (!failed) {
       setFallback(undefined)
-      setFallbackChecked(false)
+      setCheckedKey(undefined)
       return
     }
     let live = true
     readCache<T>(cacheKey)
       .then((entry) => {
         if (!live) return
-        setFallback(entry)
-        setFallbackChecked(true)
+        setFallback(entry === undefined ? undefined : { key: cacheKey, ...entry })
+        setCheckedKey(cacheKey)
       })
       .catch(() => {
         // An IndexedDB failure (quota, private browsing) still has to resolve the "is the cache
         // checked yet" question, or branch 3 above would leave the hook pending forever.
         if (!live) return
         setFallback(undefined)
-        setFallbackChecked(true)
+        setCheckedKey(cacheKey)
       })
     return () => {
       live = false
@@ -151,10 +171,11 @@ export function useCachedQuery<T>(
 
   return {
     ...resolveCachedQuery({
+      cacheKey,
       failed,
       data: query.data,
       fallback,
-      fallbackChecked,
+      checkedKey,
       error: query.error,
       isPending: query.isPending,
     }),

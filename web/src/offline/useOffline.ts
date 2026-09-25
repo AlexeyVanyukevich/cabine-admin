@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
 import { allIntents, dropIntent, putIntent, putCache, readCache } from './db'
@@ -204,15 +204,29 @@ export function useSync(): Sync {
   const [outcome, setOutcome] = useState<SyncOutcome>('idle')
   const [intents, setIntents] = useState<Intent[]>([])
   const online = useOnline()
+  // A ref, not state: two overlapping rounds are not two renders' worth of a difference, they
+  // are the same tick's worth. A `visibilitychange` during an in-flight round, a redundant
+  // `online` event, or two taps of "Отправить сейчас" would otherwise start a second `runSync`
+  // over the same queue — and the two requests it fires aren't as harmless as replaying the same
+  // idempotency key twice. Each also calls `guests.findOrCreate` on the server, a read-then-insert
+  // with no unique-violation recovery against a `UNIQUE` phone column, so the loser of that race
+  // gets back a 500 that `runSync` treats as non-retryable and marks the intent `conflict` — the
+  // owner sees "требует внимания" for a booking that was actually fine.
+  const inFlight = useRef(false)
 
   const reload = useCallback(() => {
     void allIntents().then(setIntents)
   }, [])
 
   const syncNow = useCallback(() => {
+    if (inFlight.current) return
+    inFlight.current = true
     void runSync({ post: api.post, read: allIntents, save: putIntent, drop: dropIntent })
       .then(setOutcome)
-      .finally(reload)
+      .finally(() => {
+        inFlight.current = false
+        reload()
+      })
   }, [reload])
 
   useEffect(reload, [reload])

@@ -27,12 +27,22 @@ interface Props {
   onStaleNotice: (notice: string | undefined) => void
 }
 
-/** `fetchedAt` is a moment, not a calendar date, so it is read through `Date` rather than the
- *  plain-string helpers in `calendar/nights.ts` — those exist to keep a *date* out of the
- *  browser's timezone, which is not what a "sent at" wall-clock stamp needs. */
-function stampTime(fetchedAt: string): string {
+/**
+ * `fetchedAt` is a moment, not a calendar date, so it is read through `Date` rather than the
+ * plain-string helpers in `calendar/nights.ts` — those exist to keep a *date* out of the
+ * browser's timezone, which is not what a "sent at" wall-clock stamp needs.
+ *
+ * The date itself is included whenever `fetchedAt` isn't today: a grid cached yesterday and
+ * opened offline the next morning is the ordinary case for a phone left offline overnight, and
+ * "обновлён 14:32" with no date reads as this afternoon. The stamp exists precisely so the cache
+ * can never claim to be more current than it is.
+ */
+function stampMoment(fetchedAt: string): string {
   const at = new Date(fetchedAt)
-  return `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const time = `${pad(at.getHours())}:${pad(at.getMinutes())}`
+  const date = `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`
+  return date === today() ? time : `${pad(at.getDate())}.${pad(at.getMonth() + 1)} ${time}`
 }
 
 export function Calendar({ sync, onOpenTray, onStaleNotice }: Props) {
@@ -89,7 +99,7 @@ export function Calendar({ sync, onOpenTray, onStaleNotice }: Props) {
   useEffect(() => {
     onStaleNotice(
       calendar.stale && calendar.fetchedAt !== undefined
-        ? `Календарь на память, обновлён ${stampTime(calendar.fetchedAt)}`
+        ? `Календарь на память, обновлён ${stampMoment(calendar.fetchedAt)}`
         : undefined,
     )
     return () => onStaleNotice(undefined)

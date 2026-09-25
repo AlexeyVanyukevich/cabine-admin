@@ -1823,10 +1823,18 @@ describe('runSync', () => {
     )
 
     await runSync(context)
-    // The FIRST write, before the request leaves: attempted, and shown as sending. Distinguishing
-    // "in flight" from "tried, now waiting" is what lets the tray avoid calling a booking that is
-    // sitting on the phone "Отправляется".
-    expect(context.saved[0]).toMatchObject({ attempted: true, state: 'syncing' })
+    expect(context.saved[0]?.attempted).toBe(true)
+  })
+
+  it('persists the sending state before the outcome is known', async () => {
+    // Separate from the test above, because `attempted` survives either design and so could not
+    // catch the state being dropped. Distinguishing "in flight" from "tried, now waiting" is what
+    // stops the tray calling a booking that is sitting on the phone "Отправляется".
+    const intent = newCreateIntent(PAYLOAD, 'RUB')
+    const context = deps([intent], vi.fn().mockResolvedValue({ id: 'engine-1' }))
+
+    await runSync(context)
+    expect(context.saved[0]).toMatchObject({ state: 'syncing', attempted: true })
   })
 
   it('skips intents already parked as conflicts', async () => {
@@ -2155,7 +2163,12 @@ export function SyncTray({ intents, onClose, onResolve, onRetry }: Props) {
                 Разобраться
               </button>
             ) : (
-              <span className="tray__state">{intent.attempted ? 'Отправляется' : 'Ждёт сети'}</span>
+              <span className="tray__state">
+                {/* Keyed on the state, never on `attempted`: an intent that was tried and then
+                    failed offline is still `attempted`, and calling it "Отправляется" while it
+                    sits on the phone with no network is the one lie this screen must not tell. */}
+                {intent.state === 'syncing' ? 'Отправляется' : 'Ждёт сети'}
+              </span>
             )}
           </li>
         ))}

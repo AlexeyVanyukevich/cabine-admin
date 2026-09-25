@@ -67,9 +67,16 @@ export function Calendar({ sync, onOpenTray }: Props) {
   // calendar fetch that produced `calendar.data` predates that, so without this it would render
   // the affected nights as free again the instant the matching intent drops out of the overlay —
   // exactly the "empty calendar reads as free" mistake this screen exists to prevent.
+  //
+  // Gated on `syncSerial`, not `sync.outcome`: a SECOND round that also sends something still
+  // resolves to the same `'synced'` value as the first, and React does not re-run an effect
+  // whose dependency compares equal to what it already held — the second batch's nights would
+  // then flash free with nothing to correct them. `syncSerial` increments once per round that
+  // actually sent something, so a repeated `'synced'` is still a distinct number.
   useEffect(() => {
-    if (sync.outcome === 'synced') void queryClient.invalidateQueries({ queryKey: ['calendar'] })
-  }, [sync.outcome, queryClient])
+    if (sync.syncSerial === 0) return
+    void queryClient.invalidateQueries({ queryKey: ['calendar'] })
+  }, [sync.syncSerial, queryClient])
 
   /** Nothing is optimistic: the calendar is refetched, because a stale one costs money. */
   async function refresh(outcome: 'sent' | 'queued' = 'sent') {

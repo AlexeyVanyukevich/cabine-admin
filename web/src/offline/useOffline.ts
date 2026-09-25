@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { putCache, readCache } from './db'
+import { api } from '../api'
+import { allIntents, dropIntent, putIntent, putCache, readCache } from './db'
+import { runSync, type SyncOutcome } from './sync'
+import type { Intent } from './intents'
 
 /** Whether the browser believes it has a network. It can be wrong; sync treats it as a hint. */
 export function useOnline(): boolean {
@@ -157,4 +160,59 @@ export function useCachedQuery<T>(
     }),
     refetch: () => void client.invalidateQueries({ queryKey }),
   }
+}
+
+export interface Sync {
+  outcome: SyncOutcome
+  intents: Intent[]
+  syncNow: () => void
+  reload: () => void
+}
+
+/**
+ * Runs the queue on every signal that connectivity may have returned.
+ *
+ * `online` alone is not enough: a browser reports online on a captive portal with no route
+ * anywhere. Focus and an explicit button cover what the event misses.
+ *
+ * Not the Background Sync API, which is Chromium-only — iOS Safari has never shipped it. The
+ * consequence is real and documented rather than hidden: close the app while offline and
+ * nothing is sent until it is opened again.
+ */
+export function useSync(): Sync {
+  const [outcome, setOutcome] = useState<SyncOutcome>('idle')
+  const [intents, setIntents] = useState<Intent[]>([])
+  const online = useOnline()
+
+  const reload = useCallback(() => {
+    void allIntents().then(setIntents)
+  }, [])
+
+  const syncNow = useCallback(() => {
+    void runSync({ post: api.post, read: allIntents, save: putIntent, drop: dropIntent })
+      .then(setOutcome)
+      .finally(reload)
+  }, [reload])
+
+  useEffect(reload, [reload])
+
+  useEffect(() => {
+    if (!online) {
+      setOutcome('offline')
+      return
+    }
+    syncNow()
+
+    function onFocus() {
+      if (document.visibilityState === 'visible') syncNow()
+    }
+    window.addEventListener('online', syncNow)
+    document.addEventListener('visibilitychange', onFocus)
+    return () => {
+      window.removeEventListener('online', syncNow)
+      document.removeEventListener('visibilitychange', onFocus)
+    }
+  }, [online, syncNow])
+
+  return { outcome, intents, syncNow, reload }
 }

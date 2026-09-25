@@ -4,7 +4,13 @@ import { api, ApiError } from '../api'
 import { messageFor } from '../errors'
 import './login.css'
 
-export function Login() {
+interface Props {
+  /** Runs the moment a session exists again, so whatever the queue owes goes out right away
+   *  rather than waiting for the next focus or online event. */
+  onSignedIn?: () => void
+}
+
+export function Login({ onSignedIn }: Props) {
   const navigate = useNavigate()
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | undefined>()
@@ -16,6 +22,7 @@ export function Login() {
     setError(undefined)
     try {
       await api.post('/api/login', { password })
+      onSignedIn?.()
       await navigate('/', { replace: true })
     } catch (cause) {
       // The server answers the same way for a wrong password and for one never set, and this

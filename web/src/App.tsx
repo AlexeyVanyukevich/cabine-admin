@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { api, NotSignedIn } from './api'
@@ -6,6 +7,9 @@ import { Calendar } from './routes/Calendar'
 import { Guests } from './routes/Guests'
 import { Houses } from './routes/Houses'
 import { messageFor } from './errors'
+import { ConnectionBanner } from './offline/ConnectionBanner'
+import { SyncTray } from './offline/SyncTray'
+import { useSync } from './offline/useOffline'
 
 /**
  * The session is checked by asking the server, never by reading a cookie: the cookie is
@@ -45,15 +49,30 @@ function Trouble({ message }: { message: string }) {
 }
 
 export function App() {
+  // Held here, above the router, rather than once per screen: a queued booking is a fact about
+  // the whole app, not about whichever route happens to be on screen when it was captured.
+  const sync = useSync()
+  const [trayOpen, setTrayOpen] = useState(false)
+  const openTray = () => setTrayOpen(true)
+
   return (
     <BrowserRouter>
+      <ConnectionBanner
+        outcome={sync.outcome}
+        intents={sync.intents}
+        onOpenTray={openTray}
+        // A full navigation, not a client-side one: the session is gone, so there is nothing an
+        // in-app route change can do that a fresh load of /login cannot, and it matches how
+        // `Trouble` below recovers from its own dead end.
+        onRetry={() => window.location.assign('/login')}
+      />
       <Routes>
-        <Route path="/login" element={<Login />} />
+        <Route path="/login" element={<Login onSignedIn={sync.syncNow} />} />
         <Route
           path="/"
           element={
             <RequireSession>
-              <Calendar />
+              <Calendar sync={sync} onOpenTray={openTray} />
             </RequireSession>
           }
         />
@@ -75,6 +94,19 @@ export function App() {
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+
+      {trayOpen && (
+        <SyncTray
+          intents={sync.intents}
+          onClose={() => setTrayOpen(false)}
+          onResolve={() => {
+            // The conflict screen that actually resolves one of these does not exist yet — it
+            // is the next task's job. Until then the tray still lists the conflict truthfully
+            // and "Отправить сейчас" still retries everything behind it.
+          }}
+          onRetry={sync.syncNow}
+        />
+      )}
     </BrowserRouter>
   )
 }

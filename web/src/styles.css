@@ -75,9 +75,23 @@
 }
 
 html,
-body,
-#root {
+body {
   height: 100%;
+}
+
+/*
+ * `min-height`, not `height`: a fixed `height: 100%` does not grow for a taller page (a full
+ * month of Timeline rows routinely is), so its overflowing content is never clipped — but
+ * `position: sticky` on a descendant (`.app-chrome` in App.tsx, `.timeline__head`) is bounded by
+ * ITS OWN box, not by whatever visually overflows it, and stays "stuck" only within that fixed
+ * 100vh window. Past it, a sticky element runs out of room and scrolls away with everything
+ * else — confirmed empirically, not just reasoned about, by measuring a sticky probe element's
+ * bounding rect through a synthetic multi-thousand-pixel page under both rules. `min-height`
+ * keeps the same viewport-tall floor for a short page while letting a tall one grow to its real
+ * content height, which is what gives sticky descendants a real range to stick within.
+ */
+#root {
+  min-height: 100%;
 }
 
 body {

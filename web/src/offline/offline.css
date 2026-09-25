@@ -1,4 +1,31 @@
-/* A strip the width of the screen, above everything, so it cannot be scrolled past. */
+/*
+ * Pinned to the top of the viewport by its parent, `.app-chrome` (web/src/App.tsx) — not by a
+ * `position: sticky` of its own. `Timeline` calls `scrollIntoView({block:'center'})` on mount
+ * (web/src/calendar/Timeline.tsx), which on a mid-month day scrolls straight past this on load,
+ * before the owner has had a chance to read it, unless it stays pinned. A second sticky element
+ * for the calendar's staleness stamp sits right below this one, at the same offset — two
+ * independent `position: sticky` elements both anchored to `top: 0` would land on the same spot
+ * and overlap rather than stack, since neither knows the other's height (this one's own text
+ * varies in length). Sharing `.app-chrome`'s single sticky box sidesteps that arithmetic.
+ */
+.app-chrome {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--paper);
+}
+
+.app-chrome__notice {
+  margin: 0;
+  padding: 6px 1rem;
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+  text-align: center;
+  background: var(--surface-sunk);
+  border-bottom: 1px solid var(--line);
+}
+
+/* A strip the width of the screen, so it cannot be scrolled past — see `.app-chrome` above. */
 .conn {
   display: block;
   width: 100%;

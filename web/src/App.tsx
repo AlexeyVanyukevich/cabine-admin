@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { api, NotSignedIn } from './api'
@@ -55,24 +55,42 @@ export function App() {
   const [trayOpen, setTrayOpen] = useState(false)
   const openTray = () => setTrayOpen(true)
 
+  // Calendar's own staleness line, reported up rather than rendered where it's computed: it has
+  // to sit right beside `ConnectionBanner` inside the one sticky wrapper below, because two
+  // independently `position: sticky` elements at the same offset overlap instead of stacking —
+  // there is no fixed height to offset the second one by, since the banner's own text varies.
+  // Sharing one sticky ancestor sidesteps that arithmetic entirely.
+  const [staleNotice, setStaleNotice] = useState<string | undefined>()
+  const onStaleNotice = useCallback((notice: string | undefined) => setStaleNotice(notice), [])
+
   return (
     <BrowserRouter>
-      <ConnectionBanner
-        outcome={sync.outcome}
-        intents={sync.intents}
-        onOpenTray={openTray}
-        // A full navigation, not a client-side one: the session is gone, so there is nothing an
-        // in-app route change can do that a fresh load of /login cannot, and it matches how
-        // `Trouble` below recovers from its own dead end.
-        onRetry={() => window.location.assign('/login')}
-      />
+      {/* Pinned to the top of the viewport. `Timeline` calls `scrollIntoView({block:'center'})`
+          on mount (web/src/calendar/Timeline.tsx), which on a mid-month day scrolls the whole
+          page well past here before the owner has read anything — this has to survive that. */}
+      <div className="app-chrome">
+        <ConnectionBanner
+          outcome={sync.outcome}
+          intents={sync.intents}
+          onOpenTray={openTray}
+          // A full navigation, not a client-side one: the session is gone, so there is nothing an
+          // in-app route change can do that a fresh load of /login cannot, and it matches how
+          // `Trouble` below recovers from its own dead end.
+          onRetry={() => window.location.assign('/login')}
+        />
+        {staleNotice !== undefined && (
+          <p className="app-chrome__notice" role="status">
+            {staleNotice}
+          </p>
+        )}
+      </div>
       <Routes>
         <Route path="/login" element={<Login onSignedIn={sync.syncNow} />} />
         <Route
           path="/"
           element={
             <RequireSession>
-              <Calendar sync={sync} onOpenTray={openTray} />
+              <Calendar sync={sync} onOpenTray={openTray} onStaleNotice={onStaleNotice} />
             </RequireSession>
           }
         />

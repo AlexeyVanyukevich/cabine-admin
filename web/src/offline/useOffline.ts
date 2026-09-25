@@ -188,6 +188,15 @@ export interface Sync {
   intents: Intent[]
   syncNow: () => void
   reload: () => void
+  /**
+   * Increments once per round that actually sent something — never resets, never repeats a
+   * value. A consumer that needs to react every time something is sent (Calendar's calendar
+   * refetch, so a just-synced booking's nights stop showing free) cannot key that off `outcome`
+   * alone: a SECOND round that also sends something resolves to the same `'synced'` value as the
+   * first, and an effect does not re-run for a dependency that compares equal to what it already
+   * held. This is the monotonic value that dependency needs instead.
+   */
+  syncSerial: number
 }
 
 /**
@@ -203,6 +212,7 @@ export interface Sync {
 export function useSync(): Sync {
   const [outcome, setOutcome] = useState<SyncOutcome>('idle')
   const [intents, setIntents] = useState<Intent[]>([])
+  const [syncSerial, setSyncSerial] = useState(0)
   const online = useOnline()
   // A ref, not state: two overlapping rounds are not two renders' worth of a difference, they
   // are the same tick's worth. A `visibilitychange` during an in-flight round, a redundant
@@ -222,7 +232,10 @@ export function useSync(): Sync {
     if (inFlight.current) return
     inFlight.current = true
     void runSync({ post: api.post, read: allIntents, save: putIntent, drop: dropIntent })
-      .then(setOutcome)
+      .then((result) => {
+        setOutcome(result)
+        if (result === 'synced') setSyncSerial((serial) => serial + 1)
+      })
       .finally(() => {
         inFlight.current = false
         reload()
@@ -249,5 +262,5 @@ export function useSync(): Sync {
     }
   }, [online, syncNow])
 
-  return { outcome, intents, syncNow, reload }
+  return { outcome, intents, syncNow, reload, syncSerial }
 }

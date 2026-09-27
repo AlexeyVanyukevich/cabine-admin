@@ -2,14 +2,25 @@ import { useState, type FormEvent } from 'react'
 import { api, type House } from '../api'
 import { Sheet } from '../ui/Sheet'
 import { nightsBetween } from '../calendar/nights'
-import { money, toMinor } from '../money'
+import { money, toMajor, toMinor } from '../money'
 import { useSettings } from '../settings'
 import { messageFor } from '../errors'
 import { captureOrPost } from '../offline/capture'
 import { putIntent } from '../offline/db'
+import type { CreatePayload } from '../offline/intents'
 
 /** Ties the pinned Save button to the form it submits, which is no longer its ancestor. */
 const FORM = 'new-booking'
+
+/**
+ * What a resumed booking carries over. The house and the nights are chosen fresh on the grid —
+ * a conflict is the engine's answer about occupancy, not about the guest or the price — so this
+ * is deliberately everything else a `CreatePayload` holds.
+ */
+export type RebookDraft = Pick<
+  CreatePayload,
+  'guest' | 'price_per_night' | 'addons' | 'deposit' | 'note'
+>
 
 interface Props {
   house: House
@@ -17,17 +28,32 @@ interface Props {
   checkOut: string
   onCancel: () => void
   onSaved: (outcome: 'sent' | 'queued') => void
+  /** Set only when this sheet resumes a booking the engine refused earlier. */
+  initial?: RebookDraft
 }
 
-export function NewBooking({ house, checkIn, checkOut, onCancel, onSaved }: Props) {
+export function NewBooking({ house, checkIn, checkOut, onCancel, onSaved, initial }: Props) {
   const nights = nightsBetween(checkIn, checkOut)
 
-  const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [price, setPrice] = useState(String(house.price_per_night / 100))
-  const [chosen, setChosen] = useState<string[]>([])
-  const [deposit, setDeposit] = useState('')
-  const [note, setNote] = useState('')
+  const [name, setName] = useState(initial?.guest.name ?? '')
+  const [phone, setPhone] = useState(initial?.guest.phone ?? '')
+  const [price, setPrice] = useState(() =>
+    initial === undefined ? String(house.price_per_night / 100) : toMajor(initial.price_per_night),
+  )
+  const [chosen, setChosen] = useState<string[]>(() =>
+    // An add-on code the intent carried for a house that no longer offers it — most likely a
+    // different house chosen this time round — is silently dropped rather than sent for one
+    // that can't price it.
+    initial === undefined
+      ? []
+      : initial.addons
+          .map((addon) => addon.code)
+          .filter((code) => house.addons.some((addon) => addon.code === code)),
+  )
+  const [deposit, setDeposit] = useState(() =>
+    initial === undefined ? '' : toMajor(initial.deposit),
+  )
+  const [note, setNote] = useState(initial?.note ?? '')
   const [error, setError] = useState<string | undefined>()
   const [busy, setBusy] = useState(false)
 

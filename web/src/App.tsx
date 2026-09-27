@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { api, NotSignedIn } from './api'
 import { Login } from './routes/Login'
 import { Calendar } from './routes/Calendar'
@@ -9,7 +9,11 @@ import { Houses } from './routes/Houses'
 import { messageFor } from './errors'
 import { ConnectionBanner } from './offline/ConnectionBanner'
 import { SyncTray } from './offline/SyncTray'
+import { ConflictScreen } from './offline/ConflictScreen'
+import { dropIntent } from './offline/db'
 import { useSync } from './offline/useOffline'
+import type { Intent } from './offline/intents'
+import type { RebookDraft } from './booking/NewBooking'
 
 /**
  * The session is checked by asking the server, never by reading a cookie: the cookie is
@@ -49,9 +53,22 @@ function Trouble({ message }: { message: string }) {
 }
 
 export function App() {
-  // Held here, above the router, rather than once per screen: a queued booking is a fact about
+  // `AppShell` rather than inline here: `useNavigate`/`useLocation` (needed to send a
+  // conflict's "try again" back to the calendar from wherever the tray was opened) only work
+  // inside `<BrowserRouter>`, and this component is the one that renders it.
+  return (
+    <BrowserRouter>
+      <AppShell />
+    </BrowserRouter>
+  )
+}
+
+function AppShell() {
+  // Held here, above the routes, rather than once per screen: a queued booking is a fact about
   // the whole app, not about whichever route happens to be on screen when it was captured.
   const sync = useSync()
+  const navigate = useNavigate()
+  const location = useLocation()
   const [trayOpen, setTrayOpen] = useState(false)
   const openTray = () => setTrayOpen(true)
 
@@ -63,8 +80,47 @@ export function App() {
   const [staleNotice, setStaleNotice] = useState<string | undefined>()
   const onStaleNotice = useCallback((notice: string | undefined) => setStaleNotice(notice), [])
 
+  // The conflict the owner is currently looking at, and the draft it hands to whichever
+  // `NewBooking` sheet the owner opens next. Two separate pieces of state rather than one: the
+  // screen closes the moment an action is chosen, but the draft has to survive until a fresh
+  // selection on the grid actually opens that sheet — possibly after a route change.
+  const [resolving, setResolving] = useState<Intent | undefined>()
+  const [rebooking, setRebooking] = useState<RebookDraft | undefined>()
+
+  function resolve(intent: Intent) {
+    setTrayOpen(false)
+    setResolving(intent)
+  }
+
+  function discard(intent: Intent) {
+    setResolving(undefined)
+    void dropIntent(intent.id).then(sync.reload)
+  }
+
+  function rebook(intent: Intent) {
+    setResolving(undefined)
+    // This exact attempt is spent — the engine has already answered it, and its payload is
+    // frozen (`isEditable` in `intents.ts`). What is worth keeping is lifted into `rebooking`
+    // below; the queue entry itself is not.
+    void dropIntent(intent.id).then(sync.reload)
+
+    // The house and the nights are deliberately left out: the engine's refusal was about
+    // occupancy, so occupancy is exactly what the owner re-decides, by dragging on the grid as
+    // usual. Everything else — guest, price, add-ons, deposit, note — is never asked for again.
+    const { guest, price_per_night, addons, deposit, note } = intent.payload
+    setRebooking({
+      guest,
+      price_per_night,
+      addons,
+      deposit,
+      ...(note === undefined ? {} : { note }),
+    })
+
+    if (location.pathname !== '/') navigate('/')
+  }
+
   return (
-    <BrowserRouter>
+    <>
       {/* Pinned to the top of the viewport. `Timeline` calls `scrollIntoView({block:'center'})`
           on mount (web/src/calendar/Timeline.tsx), which on a mid-month day scrolls the whole
           page well past here before the owner has read anything — this has to survive that. */}
@@ -75,7 +131,7 @@ export function App() {
           onOpenTray={openTray}
           // A full navigation, not a client-side one: the session is gone, so there is nothing an
           // in-app route change can do that a fresh load of /login cannot, and it matches how
-          // `Trouble` below recovers from its own dead end.
+          // `Trouble` above recovers from its own dead end.
           onRetry={() => window.location.assign('/login')}
         />
         {staleNotice !== undefined && (
@@ -90,7 +146,13 @@ export function App() {
           path="/"
           element={
             <RequireSession>
-              <Calendar sync={sync} onOpenTray={openTray} onStaleNotice={onStaleNotice} />
+              <Calendar
+                sync={sync}
+                onOpenTray={openTray}
+                onStaleNotice={onStaleNotice}
+                {...(rebooking === undefined ? {} : { rebooking })}
+                onRebookHandled={() => setRebooking(undefined)}
+              />
             </RequireSession>
           }
         />
@@ -117,14 +179,19 @@ export function App() {
         <SyncTray
           intents={sync.intents}
           onClose={() => setTrayOpen(false)}
-          onResolve={() => {
-            // The conflict screen that actually resolves one of these does not exist yet — it
-            // is the next task's job. Until then the tray still lists the conflict truthfully
-            // and "Отправить сейчас" still retries everything behind it.
-          }}
+          onResolve={resolve}
           onRetry={sync.syncNow}
         />
       )}
-    </BrowserRouter>
+
+      {resolving !== undefined && (
+        <ConflictScreen
+          intent={resolving}
+          onClose={() => setResolving(undefined)}
+          onRebook={rebook}
+          onDiscard={discard}
+        />
+      )}
+    </>
   )
 }

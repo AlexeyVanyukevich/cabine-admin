@@ -5,7 +5,7 @@ import { Screen } from '../ui/Screen'
 import { Timeline } from '../calendar/Timeline'
 import { useSelection } from '../calendar/useSelection'
 import { monthBounds, monthName, shiftMonth, today } from '../calendar/nights'
-import { NewBooking } from '../booking/NewBooking'
+import { NewBooking, type RebookDraft } from '../booking/NewBooking'
 import { BookingDetails } from '../booking/BookingDetails'
 import { applyIntents, type OverlayBooking } from '../offline/overlay'
 import { useCachedQuery, type Sync } from '../offline/useOffline'
@@ -25,6 +25,16 @@ interface Props {
    *  it, including on unmount, so leaving the calendar for another screen does not leave a
    *  months-old stamp glued to the top of the app. */
   onStaleNotice: (notice: string | undefined) => void
+  /**
+   * Set once, from the conflict screen's "Выбрать другие даты": the guest, price, add-ons and
+   * deposit of a refused booking, carried over into whichever nights are picked next. The house
+   * and the nights are deliberately not part of this — the engine's refusal was about occupancy,
+   * so occupancy is exactly what the owner re-decides, on this same grid, by dragging as usual.
+   */
+  rebooking?: RebookDraft
+  /** Called once the draft above has been handed to a `NewBooking` sheet, so a later, unrelated
+   *  booking on this same visit does not inherit a stranger's details. */
+  onRebookHandled: () => void
 }
 
 /**
@@ -45,7 +55,7 @@ function stampMoment(fetchedAt: string): string {
   return date === today() ? time : `${pad(at.getDate())}.${pad(at.getMonth() + 1)} ${time}`
 }
 
-export function Calendar({ sync, onOpenTray, onStaleNotice }: Props) {
+export function Calendar({ sync, onOpenTray, onStaleNotice, rebooking, onRebookHandled }: Props) {
   const queryClient = useQueryClient()
   const [month, setMonth] = useState(() => monthBounds(today()).from)
   const [open, setOpen] = useState<Booking | undefined>()
@@ -207,8 +217,15 @@ export function Calendar({ sync, onOpenTray, onStaleNotice }: Props) {
           house={pickedHouse}
           checkIn={selection.checkIn}
           checkOut={selection.checkOut}
-          onCancel={() => dispatch({ type: 'cancel' })}
-          onSaved={(outcome) => void refresh(outcome)}
+          {...(rebooking === undefined ? {} : { initial: rebooking })}
+          onCancel={() => {
+            dispatch({ type: 'cancel' })
+            if (rebooking !== undefined) onRebookHandled()
+          }}
+          onSaved={(outcome) => {
+            void refresh(outcome)
+            if (rebooking !== undefined) onRebookHandled()
+          }}
         />
       )}
 

@@ -1,5 +1,9 @@
+/* `min-height: 100vh`, not a percentage: `#root` (styles.css) deliberately has no explicit
+   height, so a percentage here would resolve against nothing. `100dvh` overrides it on the
+   mobile browsers that support the dynamic viewport unit. See the note on `#root` in styles.css. */
 .login {
-  min-height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
   padding: 24px 20px calc(24px + env(safe-area-inset-bottom));

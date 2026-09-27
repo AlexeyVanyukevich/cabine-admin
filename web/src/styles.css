@@ -80,19 +80,39 @@ body {
 }
 
 /*
- * `min-height`, not `height`: a fixed `height: 100%` does not grow for a taller page (a full
- * month of Timeline rows routinely is), so its overflowing content is never clipped — but
- * `position: sticky` on a descendant (`.app-chrome` in App.tsx, `.timeline__head`) is bounded by
- * ITS OWN box, not by whatever visually overflows it, and stays "stuck" only within that fixed
- * 100vh window. Past it, a sticky element runs out of room and scrolls away with everything
- * else — confirmed empirically, not just reasoned about, by measuring a sticky probe element's
- * bounding rect through a synthetic multi-thousand-pixel page under both rules. `min-height`
- * keeps the same viewport-tall floor for a short page while letting a tall one grow to its real
- * content height, which is what gives sticky descendants a real range to stick within.
+ * `#root` deliberately carries NO height rule of its own — plain `auto`, a block div's default,
+ * so its box always equals its actual content height. The original rule and two fix attempts
+ * were all rejected here, each confirmed broken by measuring real computed layout rather than by
+ * reasoning about the CSS:
+ *
+ * 1. `#root { height: 100% }` (the original rule): fixed at exactly the viewport height, so it
+ *    never grows for a taller page (a full month of Timeline rows routinely is). Content past it
+ *    still renders — nothing here clips — but `position: sticky` on `.app-chrome` (App.tsx) is
+ *    bounded by its OWN containing block's box, not by whatever visually overflows it, so it
+ *    stays "stuck" only within that fixed 100vh window and scrolls away with everything else past
+ *    one screen of content.
+ * 2. `#root { min-height: 100% }` alone (no flex): fixes (1) — a MINIMUM height still lets #root
+ *    grow with content — but breaks `.login`/`.page`/`.waiting`/`.trouble`, which all filled the
+ *    viewport on short content via their OWN percentage `min-height: 100%`. A percentage height
+ *    on a child only resolves against an ancestor whose height is explicitly specified;
+ *    `min-height` on the ancestor does not qualify, so their percentage resolves to nothing and
+ *    they collapse to their content's own height instead.
+ * 3. `#root { min-height: 100%; display: flex; flex-direction: column }`, changing those three
+ *    from `min-height: 100%` to `flex: 1` to sidestep the percentage rule above: this REPAIRS
+ *    them, but breaks sticky again, differently — bisected empirically to `display: flex` on
+ *    `#root` alone (with or without the `min-height`, with or without `flex-shrink`/`align-self`
+ *    on `.app-chrome` itself). NOT a general "flex items can't stick" rule: `.nav`'s own
+ *    `position: sticky; bottom: 0` is a flex item of `.page` (screen.css, also a flex column) and
+ *    keeps working throughout. Something specific to `.app-chrome`'s situation under `#root` as a
+ *    flex container broke it; what exactly was not tracked down further once a working
+ *    alternative — this one — was found and confirmed by measurement.
+ *
+ * What's here instead: no rule on `#root`, so it is plain `auto` and always matches its content.
+ * `.login`/`.page`/`.waiting`/`.trouble` each secure their own "at least one viewport tall" via
+ * `min-height: 100vh` (with a `100dvh` override for the mobile browsers that support the dynamic
+ * unit), which resolves against the viewport directly rather than against this element at all —
+ * sidestepping both the percentage-resolution rule and the flex/sticky interaction above.
  */
-#root {
-  min-height: 100%;
-}
 
 body {
   margin: 0;

@@ -1336,15 +1336,27 @@ export function useCachedQuery<T>(
   // Four ordered branches. Extract them into a pure function and unit-test it: the ordering is
   // the whole correctness of this hook and it cannot be exercised without a React renderer.
   //
-  // 1. !failed && data !== undefined  -> fresh: data, no fetchedAt, stale false, no error
-  // 2. failed && fallback !== undefined -> stale: the cached value WITH its fetchedAt, error hidden
-  // 3. failed && !fallbackChecked     -> pending: the cache read is still in flight
-  // 4. otherwise                      -> surface the error
+  // 1. !failed && data !== undefined                  -> fresh: data, no fetchedAt, no error
+  // 2. failed && fallback?.key === cacheKey           -> stale: the value WITH its fetchedAt
+  // 3. failed && checkedKey !== cacheKey              -> pending: the cache read is in flight
+  // 4. otherwise                                     -> surface the error
+  //
+  // `fallback` carries the key it was fetched for, and branch 2 compares it. React Query hands
+  // back a PREVIOUS key's cached error synchronously, in the same render that switches `cacheKey`
+  // back to it, before the effect that would reset `fallback` has run. Without the comparison
+  // branch 2 serves the other key's value under this key's stamp: a month revisited while offline
+  // renders the PREVIOUS month's cache, and `Timeline` defaults every night it cannot find to
+  // available — so the owner sees a fully free month. That is the "everything is free" render the
+  // fourth invariant forbids. For the same reason `checkedKey` is a key rather than a boolean: a
+  // boolean left over from the last key checked would skip branch 3 and fall through to the error.
+  // Both comparisons belong in the value the render reads, never in an effect — the bad render
+  // happens in the same pass, and for an availability grid one bad frame is one too many.
   return resolveCachedQuery({
+    cacheKey,
     failed,
     data: query.data,
     fallback,
-    fallbackChecked,
+    checkedKey,
     error: query.error,
   })
 }

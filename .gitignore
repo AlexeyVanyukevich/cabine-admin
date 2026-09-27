@@ -14,3 +14,6 @@ server/public/
 
 # Scratch for plan execution: ledgers, briefs, review packages. Git history is the record.
 .superpowers/
+
+# Scratch from browser-driven verification runs.
+.playwright-mcp/

@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
-import { api, NotSignedIn } from './api'
+import { api, isOffline, NotSignedIn } from './api'
 import { Login } from './routes/Login'
 import { Calendar } from './routes/Calendar'
 import { Guests } from './routes/Guests'
@@ -29,6 +29,14 @@ function RequireSession({ children }: { children: React.ReactNode }) {
 
   if (session.isPending) return <Waiting />
   if (session.error instanceof NotSignedIn) return <Navigate to="/login" replace />
+  // The request never reached the server — no answer, not a "no". Proceeding is safe: nothing
+  // below this gate is a decision made in the browser, every read and write still goes through
+  // the server, so there is nothing here to leak. If the session had in fact expired, the first
+  // of those calls comes back 401, and `useSync`'s `runSync` (web/src/offline/sync.ts) already
+  // pauses the queue and routes to login on exactly that — this gate is a convenience for the
+  // common case, not the boundary that guards anything. Without this branch, a cold reload with
+  // no network — the ordinary way this feature is meant to be used — never reaches the calendar.
+  if (session.error && isOffline(session.error)) return <>{children}</>
   if (session.error) return <Trouble message={messageFor(session.error)} />
   return <>{children}</>
 }

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
-import type { Booking, CalendarHouse } from '../api'
+import type { CalendarHouse } from '../api'
+import type { OverlayBooking } from '../offline/overlay'
 import type { SelectionState } from './useSelection'
 import { eachNight, isWeekend, today, weekday } from './nights'
 import { currencyOf, money } from '../money'
@@ -10,9 +11,11 @@ interface Props {
   from: string
   to: string
   houses: CalendarHouse[]
-  bookings: Booking[]
+  // Widened from `Booking`: that type has no `pending` field, so passing it through here would
+  // silently drop the one flag that tells this screen a booking is not yet engine truth.
+  bookings: OverlayBooking[]
   selection: SelectionState
-  onOpenBooking: (booking: Booking) => void
+  onOpenBooking: (booking: OverlayBooking) => void
   onNightDown: (houseId: string, date: string, free: string[]) => void
   onNightOver: (houseId: string, date: string, free: string[]) => void
 }
@@ -20,7 +23,7 @@ interface Props {
 /** Where a night sits inside its stay, which is what gives a block its shape. */
 type Segment = 'start' | 'middle' | 'end' | 'only'
 
-function segmentOf(booking: Booking, date: string): Segment {
+function segmentOf(booking: OverlayBooking, date: string): Segment {
   const lastNight = eachNight(booking.check_in, booking.check_out).at(-1)
   if (booking.nights === 1) return 'only'
   if (date === booking.check_in) return 'start'
@@ -61,7 +64,7 @@ export function Timeline({
 
   const live = bookings.filter((booking) => booking.status !== 'cancelled')
 
-  function bookingAt(house: CalendarHouse, date: string): Booking | undefined {
+  function bookingAt(house: CalendarHouse, date: string): OverlayBooking | undefined {
     return live.find(
       (booking) =>
         booking.house_id === house.id &&
@@ -160,6 +163,12 @@ export function Timeline({
 
                 const segment = segmentOf(booking, date)
                 const owes = (booking.balance ?? 0) > 0
+                // Waiting or sending both mean the same thing to the owner: captured here, not
+                // yet agreed. A conflict is different — the engine has already refused it — and
+                // must never draw the same as an ordinary confirmed booking. See timeline.css.
+                const pendingState = booking.pending?.state
+                const queued = pendingState === 'pending' || pendingState === 'syncing'
+                const conflicted = pendingState === 'conflict'
 
                 return (
                   <button
@@ -170,6 +179,8 @@ export function Timeline({
                       'timeline__cell--lit',
                       `timeline__cell--${segment}`,
                       booking.orphan ? 'timeline__cell--orphan' : '',
+                      queued ? 'timeline__cell--queued' : '',
+                      conflicted ? 'timeline__cell--conflict' : '',
                     ]
                       .filter(Boolean)
                       .join(' ')}
@@ -188,6 +199,14 @@ export function Timeline({
                           <span className="timeline__owed">
                             {money(booking.balance, currencyOf(booking.currency, currencies))}
                           </span>
+                        )}
+                        {conflicted && (
+                          <span className="visually-hidden">
+                            Движок отклонил эту бронь — требует внимания
+                          </span>
+                        )}
+                        {queued && (
+                          <span className="visually-hidden">Ещё не подтверждено движком</span>
                         )}
                       </span>
                     )}

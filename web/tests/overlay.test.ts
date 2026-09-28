@@ -113,6 +113,43 @@ describe('applyIntents', () => {
     expect(houses[0]?.nights[0]?.available).toBe(false)
   })
 
+  it('carries a marker on a conflicted booking that a confirmed one does not', () => {
+    // The calendar must be able to tell the two apart after render: a confirmed booking is
+    // engine truth, a conflicted one is a refusal the owner still has to resolve, and the two
+    // must never draw the same way.
+    const confirmed: CalendarView = {
+      ...VIEW,
+      bookings: [
+        {
+          id: 'engine-1',
+          house_id: HOUSE_ID,
+          house_name: 'Дом у озера',
+          check_in: '2026-10-05',
+          check_out: '2026-10-06',
+          nights: 1,
+          status: 'confirmed',
+          price_per_night: 30000,
+          addons: [],
+          currency: 'RUB',
+          total: 30000,
+          deposit: 0,
+          balance: 30000,
+          note: null,
+          guest: { id: 'g1', name: 'Пётр', phone: '+375291112233', note: null },
+          orphan: false,
+        },
+      ],
+    }
+    const refused: Intent = { ...pending(), state: 'conflict', attempted: true }
+    const { bookings } = applyIntents(confirmed, [refused], HOUSES)
+
+    const confirmedBooking = bookings.find((booking) => booking.id === 'engine-1')
+    const conflictedBooking = bookings.find((booking) => booking.id !== 'engine-1')
+
+    expect(confirmedBooking?.pending).toBeUndefined()
+    expect(conflictedBooking?.pending?.state).toBe('conflict')
+  })
+
   it('keeps engine bookings alongside queued ones', () => {
     const withBooking: CalendarView = {
       ...VIEW,

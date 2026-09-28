@@ -53,8 +53,14 @@ and API response the page receives and failing if `bk_live_` appears in any of t
 because rules enforced on the way through are only real while this server is the sole caller.
 
 **The engine is the single source of truth for occupancy.** No dates and no booking status are
-stored here, so these records cannot drift from the engine's. Rendering joins the two by
-`engine_booking_id`, and a migration test asserts those columns do not exist.
+stored here on the **server**, so these records cannot drift from the engine's. The browser keeps
+a cache of the last calendar it read, in IndexedDB, so a booking can be taken with no network. It
+holds dates and statuses; the server still holds neither. The invariant is about this project's
+records drifting from the engine's, and a cache that is never written back cannot drift into
+anything — it is replaced wholesale by the next successful read and is never merged with one. It
+is rendered only under a stamp saying when it was fetched. Rendering joins the engine's calendar
+to the server's details by `engine_booking_id`, and a migration test asserts those columns do not
+exist on the server.
 
 **Writes go to the engine first, then here.** A failure that way round leaves a booking whose
 guest details are missing — annoying, visible and repairable. The reverse order can leave a
@@ -471,16 +477,22 @@ form it submits through the `form` attribute, since the two are no longer nested
 
 ## 9. When the engine is unreachable
 
-The calendar does not render; an explicit error does, with a retry. Of every state this
-interface can be in, an empty grid is the only one that costs money.
+**An empty grid is still never rendered.** What may be rendered when the engine cannot be reached
+is the last calendar this browser successfully read, under a stamp saying how old it is, so the
+owner can record a booking taken in a dead zone. Anything captured that way is marked unconfirmed
+until the engine accepts it, and the engine's refusal is escalated to the owner rather than
+resolved automatically. See
+[the offline bookings spec](superpowers/specs/2026-09-03-offline-bookings-design.md) for why this
+reverses Slice 1's decision to keep no cache at all.
 
-There is no availability cache (§2), so a failed engine cannot be ridden out even for reads.
-Accepted deliberately: a stale cache would tell the same lie more convincingly.
+Sync runs when the app is open — on reconnect, on focus, after login, and on demand. It is **not**
+the Background Sync API, which iOS Safari does not implement: **close the app while offline and
+nothing is sent until it is opened again.** Sync-on-open is the honest baseline.
 
 The two operational failures — `503 engine_unreachable` and `502 engine_rejected_our_key` — are
-logged at error level even though the answer to the owner is a clean one. `401` is never
-retried: the key was revoked or the tenant disabled, and the message must say so, or the owner
-will spend half an hour reloading the page.
+logged at error level even though the answer to the owner is a clean one. `401` is never retried:
+the key was revoked or the tenant disabled, and the message must say so, or the owner will spend
+half an hour reloading the page.
 
 The engine key is redacted from logs, along with the session cookie: it travels in
 `authorization` on every outbound call, and a logged request from a debugging session would
@@ -493,28 +505,28 @@ outlive the key it belongs to.
 Every route is under `/api`. Bodies are TypeBox with `additionalProperties: false` — unknown
 fields are rejected, never ignored. Errors keep the shape `{ error, message, details? }`.
 
-| Route                               | Notes                                                                                 |
-| ----------------------------------- | ------------------------------------------------------------------------------------- |
-| `GET /api/health`                   | Public                                                                                |
-| `POST /api/login`                   | Public, rate-limited per IP. Sets the session cookie, `204`                           |
-| `POST /api/logout`                  | Clears it, `204`                                                                      |
-| `GET /api/me`                       | The session check the SPA uses                                                        |
-| `GET /api/calendar?from&to`         | Both houses' nights and bookings, assembled from both systems                         |
-| `POST /api/bookings`                | Engine first, `201`. A replayed idempotency key answers with the booking already made |
-| `GET /api/bookings/:id`             | By `engine_booking_id`                                                                |
-| `POST /api/bookings/:id/reschedule` | Engine only                                                                           |
-| `POST /api/bookings/:id/cancel`     | Engine only                                                                           |
-| `PATCH /api/bookings/:id`           | Deposit and note. This database only                                                  |
-| `GET /api/houses`                   | Check-in read from the engine, best-effort                                            |
-| `POST /api/houses`                  | Verifies the resource exists and is not already claimed                               |
-| `PATCH /api/houses/:id`             | Name, price, check-out time, add-on price list                                        |
-| `GET /api/settings`                 | The currency in force, and the list on offer                                          |
-| `PATCH /api/settings`               | Changes the currency. Converts nothing                                                |
-| `GET /api/guests?phone`             | Lookup by normalised phone                                                            |
-| `GET /api/guests/:id`               |                                                                                       |
-| `GET /api/guests/:id/bookings`      | History, newest first                                                                 |
-| `POST /api/guests`                  |                                                                                       |
-| `PATCH /api/guests/:id`             |                                                                                       |
+| Route                               | Notes                                                                                                                                                                                                                                    |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/health`                   | Public                                                                                                                                                                                                                                   |
+| `POST /api/login`                   | Public, rate-limited per IP. Sets the session cookie, `204`                                                                                                                                                                              |
+| `POST /api/logout`                  | Clears it, `204`                                                                                                                                                                                                                         |
+| `GET /api/me`                       | The session check the SPA uses                                                                                                                                                                                                           |
+| `GET /api/calendar?from&to`         | Both houses' nights and bookings, assembled from both systems                                                                                                                                                                            |
+| `POST /api/bookings`                | Engine first, `201`. Client supplies `idempotency_key` (UUID, for idempotent replays) and `currency` (as agreed offline, not from the setting). A replayed key answers with the booking already made rather than holding the night twice |
+| `GET /api/bookings/:id`             | By `engine_booking_id`                                                                                                                                                                                                                   |
+| `POST /api/bookings/:id/reschedule` | Engine only                                                                                                                                                                                                                              |
+| `POST /api/bookings/:id/cancel`     | Engine only                                                                                                                                                                                                                              |
+| `PATCH /api/bookings/:id`           | Deposit and note. This database only                                                                                                                                                                                                     |
+| `GET /api/houses`                   | Check-in read from the engine, best-effort                                                                                                                                                                                               |
+| `POST /api/houses`                  | Verifies the resource exists and is not already claimed                                                                                                                                                                                  |
+| `PATCH /api/houses/:id`             | Name, price, check-out time, add-on price list                                                                                                                                                                                           |
+| `GET /api/settings`                 | The currency in force, and the list on offer                                                                                                                                                                                             |
+| `PATCH /api/settings`               | Changes the currency. Converts nothing                                                                                                                                                                                                   |
+| `GET /api/guests?phone`             | Lookup by normalised phone                                                                                                                                                                                                               |
+| `GET /api/guests/:id`               |                                                                                                                                                                                                                                          |
+| `GET /api/guests/:id/bookings`      | History, newest first                                                                                                                                                                                                                    |
+| `POST /api/guests`                  |                                                                                                                                                                                                                                          |
+| `PATCH /api/guests/:id`             |                                                                                                                                                                                                                                          |
 
 ---
 

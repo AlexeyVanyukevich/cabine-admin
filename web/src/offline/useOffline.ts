@@ -126,6 +126,7 @@ export function useCachedQuery<T>(
   cacheKey: string,
   queryKey: unknown[],
   fetcher: () => Promise<T>,
+  options: { staleTime?: number } = {},
 ): CachedQuery<T> {
   const client = useQueryClient()
   const [fallback, setFallback] = useState<
@@ -140,6 +141,7 @@ export function useCachedQuery<T>(
       await putCache(cacheKey, value)
       return value
     },
+    ...options,
   })
 
   const failed = query.error != null

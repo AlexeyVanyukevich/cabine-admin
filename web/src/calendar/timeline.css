@@ -156,6 +156,45 @@
   );
 }
 
+/*
+ * Captured, not yet agreed. Same lit block, but the dashed edge and the corner mark say "sent"
+ * and "hoped for" rather than "the engine confirms this" — waiting and sending read the same to
+ * the owner, so both states share this treatment.
+ */
+.timeline__cell--queued::before {
+  outline: 2px dashed var(--water);
+  outline-offset: -2px;
+}
+
+.timeline__cell--queued::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--water);
+}
+
+/* The engine has already refused this one. Distinct from `--orphan` (a confirmed booking
+ * missing its guest record) and from `--queued` (still hoped for) — this one needs a decision. */
+.timeline__cell--conflict::before {
+  outline: 2px solid var(--alert);
+  outline-offset: -2px;
+}
+
+.timeline__cell--conflict::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--alert);
+}
+
 .timeline__cell--lit:hover::before {
   filter: brightness(0.95);
 }

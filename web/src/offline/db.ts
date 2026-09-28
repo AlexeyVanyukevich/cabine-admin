@@ -65,6 +65,7 @@ export async function dropIntent(id: string): Promise<void> {
 
 /** Test seam only. Production never deletes the database. */
 export async function resetForTests(): Promise<void> {
+  if (import.meta.env.PROD) throw new Error('resetForTests is test-only')
   const database = await db()
   await database.clear('cache')
   await database.clear('intents')

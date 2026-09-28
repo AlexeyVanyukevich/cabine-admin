@@ -1,13 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { expect, test, type Page } from '@playwright/test'
-import {
-  appUrl,
-  bookViaPage,
-  monthStart,
-  resetAppDb,
-  seedHouse,
-  setOwnerPassword,
-} from './helpers.js'
+import { appUrl, monthStart, resetAppDb, seedHouse, setOwnerPassword } from './helpers.js'
 
 const PASSWORD = 'correct horse battery staple'
 const HOUSE = 'Дом у озера'

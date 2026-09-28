@@ -23,14 +23,6 @@ export class SettingsService {
     return this.view(input.currency)
   }
 
-  /**
-   * The code a booking made right now should be snapshotted with. Nothing converts and nothing
-   * recomputes: this setting decides what the *next* price means, never what an agreed one did.
-   */
-  async currentCurrency(): Promise<string> {
-    return this.repository.currency()
-  }
-
   private view(code: string): SettingsView {
     return { currency: currencyFor(code), currencies: CURRENCIES }
   }

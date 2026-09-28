@@ -13,7 +13,7 @@ import { ConflictScreen } from './offline/ConflictScreen'
 import { dropIntent } from './offline/db'
 import { useSync } from './offline/useOffline'
 import type { Intent } from './offline/intents'
-import type { RebookDraft } from './booking/NewBooking'
+import type { RebookRequest } from './booking/NewBooking'
 
 /**
  * The session is checked by asking the server, never by reading a cookie: the cookie is
@@ -85,7 +85,7 @@ function AppShell() {
   // screen closes the moment an action is chosen, but the draft has to survive until a fresh
   // selection on the grid actually opens that sheet — possibly after a route change.
   const [resolving, setResolving] = useState<Intent | undefined>()
-  const [rebooking, setRebooking] = useState<RebookDraft | undefined>()
+  const [rebooking, setRebooking] = useState<RebookRequest | undefined>()
 
   function resolve(intent: Intent) {
     setTrayOpen(false)
@@ -101,19 +101,24 @@ function AppShell() {
     setResolving(undefined)
     // This exact attempt is spent — the engine has already answered it, and its payload is
     // frozen (`isEditable` in `intents.ts`). What is worth keeping is lifted into `rebooking`
-    // below; the queue entry itself is not.
-    void dropIntent(intent.id).then(sync.reload)
-
+    // below. The queue entry itself is deliberately NOT dropped here: it is the only durable
+    // copy of the guest, price and add-on details until a replacement booking actually exists,
+    // and this moment is well before that — the owner still has to drag nights and save.
+    // `Calendar.tsx` drops it once the replacement is saved, or once the owner cancels that.
+    //
     // The house and the nights are deliberately left out: the engine's refusal was about
     // occupancy, so occupancy is exactly what the owner re-decides, by dragging on the grid as
     // usual. Everything else — guest, price, add-ons, deposit, note — is never asked for again.
     const { guest, price_per_night, addons, deposit, note } = intent.payload
     setRebooking({
-      guest,
-      price_per_night,
-      addons,
-      deposit,
-      ...(note === undefined ? {} : { note }),
+      intentId: intent.id,
+      draft: {
+        guest,
+        price_per_night,
+        addons,
+        deposit,
+        ...(note === undefined ? {} : { note }),
+      },
     })
 
     if (location.pathname !== '/') navigate('/')

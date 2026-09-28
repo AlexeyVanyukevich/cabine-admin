@@ -7,7 +7,6 @@ import type { Guest } from '../guests/guest.repository.js'
 import type { GuestService } from '../guests/guest.service.js'
 import type { House } from '../houses/house.repository.js'
 import type { HouseService } from '../houses/house.service.js'
-import type { SettingsService } from '../settings/settings.service.js'
 import type { BookingDetails, BookingRepository } from './booking.repository.js'
 
 export interface BookingView {
@@ -58,7 +57,6 @@ export class BookingService {
     private readonly houses: HouseService,
     private readonly guests: GuestService,
     private readonly engine: EngineClient,
-    private readonly settings: SettingsService,
   ) {}
 
   /**
@@ -100,8 +98,6 @@ export class BookingService {
     // Validated before anything is written, so a bad request never reaches the engine.
     this.assertUsable(body, addons, deposit)
 
-    const { guest } = await this.guests.findOrCreate(body.guest)
-
     // Taken from the request, not from settings. The booking records what it was agreed in,
     // and for one captured offline that agreement happened before this request was sent.
     const currency = body.currency
@@ -126,8 +122,11 @@ export class BookingService {
     // not a duplicate to make.
     const existing = await this.repository.byEngineId(engineBooking.id)
     if (existing !== undefined) {
+      const guest = await this.guests.byId(existing.guest_id)
       return this.viewFromRow(engineBooking, house, guest, existing)
     }
+
+    const { guest } = await this.guests.findOrCreate(body.guest)
 
     await this.repository.insert({
       engine_booking_id: engineBooking.id,

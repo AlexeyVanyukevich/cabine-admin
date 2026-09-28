@@ -35,9 +35,6 @@ const COPY: Record<string, string> = {
   // after its first answer never arrived. Obey the freeze: reload rather than resending.
   idempotency_key_reused:
     'Эта бронь уже отправлена с другими данными. Обновите страницу, чтобы увидеть, что сохранилось.',
-
-  // The queue's own vocabulary. Not a server code — raised here.
-  queued: 'Нет сети. Бронь сохранена на телефоне и уйдёт, когда появится связь.',
 }
 
 const GENERIC = 'Что-то пошло не так. Попробуйте ещё раз.'

@@ -285,4 +285,34 @@ describe('the idempotency key', () => {
       .execute()
     expect(rows).toHaveLength(1)
   })
+
+  it('returns the stored guest on replay, not the guest in the request body', async () => {
+    const key = randomUUID()
+    const dates = window()
+    const body = booking({ idempotency_key: key, ...dates })
+    const created = await post(body)
+    expect(created.statusCode).toBe(201)
+    const id = created.json().id as string
+
+    // Simulates the first answer being lost: the engine call landed and the night is held,
+    // but the local insert never happened. When replayed, the service must resolve the guest
+    // from the stored row, not from this request.
+    await getTestDb().deleteFrom('booking_details').where('engine_booking_id', '=', id).execute()
+
+    const replayWithDifferentGuest = await post(
+      booking({
+        idempotency_key: key,
+        ...dates,
+        guest: { name: 'Мария', phone: '+7 999 888 77 66' },
+      }),
+    )
+
+    expect(replayWithDifferentGuest.statusCode).toBe(201)
+    expect(replayWithDifferentGuest.json().id).toBe(id)
+    // The stored guest, not the one in this request
+    expect(replayWithDifferentGuest.json().guest).toMatchObject({
+      name: 'Иван',
+      phone: '+79123456789',
+    })
+  })
 })

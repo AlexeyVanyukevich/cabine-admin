@@ -5,9 +5,10 @@ import { Screen } from '../ui/Screen'
 import { Timeline } from '../calendar/Timeline'
 import { useSelection } from '../calendar/useSelection'
 import { monthBounds, monthName, shiftMonth, today } from '../calendar/nights'
-import { NewBooking, type RebookDraft } from '../booking/NewBooking'
+import { NewBooking, type RebookRequest } from '../booking/NewBooking'
 import { BookingDetails } from '../booking/BookingDetails'
 import { applyIntents, type OverlayBooking } from '../offline/overlay'
+import { dropIntent } from '../offline/db'
 import { useCachedQuery, type Sync } from '../offline/useOffline'
 import { messageFor } from '../errors'
 import '../booking/booking.css'
@@ -30,8 +31,9 @@ interface Props {
    * deposit of a refused booking, carried over into whichever nights are picked next. The house
    * and the nights are deliberately not part of this — the engine's refusal was about occupancy,
    * so occupancy is exactly what the owner re-decides, on this same grid, by dragging as usual.
+   * Paired with the refused intent's id so it can be dropped once the replacement is saved.
    */
-  rebooking?: RebookDraft
+  rebooking?: RebookRequest
   /** Called once the draft above has been handed to a `NewBooking` sheet, so a later, unrelated
    *  booking on this same visit does not inherit a stranger's details. */
   onRebookHandled: () => void
@@ -217,14 +219,20 @@ export function Calendar({ sync, onOpenTray, onStaleNotice, rebooking, onRebookH
           house={pickedHouse}
           checkIn={selection.checkIn}
           checkOut={selection.checkOut}
-          {...(rebooking === undefined ? {} : { initial: rebooking })}
+          {...(rebooking === undefined ? {} : { initial: rebooking.draft })}
           onCancel={() => {
             dispatch({ type: 'cancel' })
-            if (rebooking !== undefined) onRebookHandled()
+            if (rebooking !== undefined) {
+              void dropIntent(rebooking.intentId).then(sync.reload)
+              onRebookHandled()
+            }
           }}
           onSaved={(outcome) => {
             void refresh(outcome)
-            if (rebooking !== undefined) onRebookHandled()
+            if (rebooking !== undefined) {
+              void dropIntent(rebooking.intentId).then(sync.reload)
+              onRebookHandled()
+            }
           }}
         />
       )}

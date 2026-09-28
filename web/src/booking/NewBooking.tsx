@@ -22,6 +22,17 @@ export type RebookDraft = Pick<
   'guest' | 'price_per_night' | 'addons' | 'deposit' | 'note'
 >
 
+/**
+ * A rebook in progress, paired with the refused intent it will replace. The intent is kept in
+ * IndexedDB — never dropped — until this draft actually becomes a new booking (sent or queued):
+ * see `App.tsx`'s `rebook` and `Calendar.tsx`'s `onSaved`/`onCancel`, which are the only places
+ * that drop it.
+ */
+export interface RebookRequest {
+  intentId: string
+  draft: RebookDraft
+}
+
 interface Props {
   house: House
   checkIn: string

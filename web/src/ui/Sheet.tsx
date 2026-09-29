@@ -19,6 +19,9 @@ interface Props {
  */
 export function Sheet({ title, onClose, children, footer }: Props) {
   const panel = useRef<HTMLDivElement>(null)
+  // The tap that opens a sheet is followed by a click the browser aims after the sheet has
+  // appeared, so it lands on the backdrop. Only a press that began there may close it.
+  const pressedBackdrop = useRef(false)
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -31,7 +34,16 @@ export function Sheet({ title, onClose, children, footer }: Props) {
   }, [onClose])
 
   return (
-    <div className="sheet" role="presentation" onClick={onClose}>
+    <div
+      className="sheet"
+      role="presentation"
+      onPointerDown={(event) => {
+        pressedBackdrop.current = event.target === event.currentTarget
+      }}
+      onClick={(event) => {
+        if (pressedBackdrop.current && event.target === event.currentTarget) onClose()
+      }}
+    >
       <div
         ref={panel}
         className="sheet__panel"
@@ -39,7 +51,6 @@ export function Sheet({ title, onClose, children, footer }: Props) {
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        onClick={(event) => event.stopPropagation()}
       >
         <header className="sheet__head">
           <h2 className="sheet__title">{title}</h2>

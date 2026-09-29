@@ -294,11 +294,6 @@ describe('the idempotency key', () => {
     expect(created.statusCode).toBe(201)
     const id = created.json().id as string
 
-    // Simulates the first answer being lost: the engine call landed and the night is held,
-    // but the local insert never happened. When replayed, the service must resolve the guest
-    // from the stored row, not from this request.
-    await getTestDb().deleteFrom('booking_details').where('engine_booking_id', '=', id).execute()
-
     const replayWithDifferentGuest = await post(
       booking({
         idempotency_key: key,

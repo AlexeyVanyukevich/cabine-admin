@@ -36,7 +36,12 @@
   font-weight: 500;
 }
 
+/* A full-height tap target for the guest's number; the negative margin gives the height back so
+   the row keeps its rhythm. */
 .facts__row a {
+  display: inline-block;
+  padding-block: calc((var(--tap) - 1lh) / 2);
+  margin-block: calc((1lh - var(--tap)) / 2);
   color: var(--water);
 }
 

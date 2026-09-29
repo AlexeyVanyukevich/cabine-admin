@@ -18,10 +18,15 @@
   overflow: hidden;
 }
 
+/*
+ * Every row is a grid of its own, so a lane that sized itself to its content would shift that
+ * one row's other lanes out of line — and past the timeline's clipped edge. `minmax(0, 1fr)`
+ * keeps each lane an equal share whatever a guest's name is; the name ellipsises instead.
+ */
 .timeline__head,
 .timeline__row {
   display: grid;
-  grid-template-columns: var(--date-col) repeat(var(--lanes), 1fr);
+  grid-template-columns: var(--date-col) repeat(var(--lanes), minmax(0, 1fr));
 }
 
 .timeline__head {

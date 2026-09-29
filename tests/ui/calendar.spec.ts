@@ -166,3 +166,25 @@ test('cancelling a booking frees its nights', async ({ page }) => {
   await expect(page.getByTestId('booking-bar').filter({ hasText: 'Ольга' })).toBeHidden()
   await expect(night(page, checkIn)).toHaveAttribute('data-available', 'true')
 })
+
+// The row a stay starts on carries its guest's name, and every row is a grid of its own. A name
+// that sized its lane would shift that one row's other lanes sideways, off the clipped edge of
+// the timeline, and the other house's night on that date could be neither seen nor tapped.
+test('a long guest name does not push the other house off its row', async ({ page }) => {
+  const { checkIn, month } = stay(0)
+  await seedHouse('Второй дом', 'B')
+  await signIn(page)
+  await goToMonth(page, month)
+
+  await pickNights(page, checkIn, addDays(checkIn, 1))
+  await page.getByLabel('Имя').fill('Александра Константиновна Преображенская')
+  await page.getByLabel('Телефон').fill('+7 912 555 66 77')
+  await page.getByRole('button', { name: 'Сохранить' }).click()
+  await expect(page.getByTestId('booking-bar').filter({ hasText: 'Александра' })).toBeVisible()
+
+  const row = page.locator('.timeline__row').filter({ has: night(page, checkIn) })
+  const other = (await row.locator('.timeline__cell').nth(1).boundingBox())!
+  const lane = (await page.locator('.timeline__house', { hasText: 'Второй дом' }).boundingBox())!
+  expect(Math.abs(other.x - lane.x)).toBeLessThan(1)
+  expect(other.x + other.width).toBeLessThanOrEqual(page.viewportSize()!.width)
+})

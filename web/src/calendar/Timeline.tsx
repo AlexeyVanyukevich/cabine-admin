@@ -76,7 +76,7 @@ export function Timeline({
     house.nights.filter((night) => night.available).map((night) => night.date)
 
   function selected(houseId: string, date: string): boolean {
-    if (selection.kind !== 'selecting' || selection.houseId !== houseId) return false
+    if (selection.kind === 'idle' || selection.houseId !== houseId) return false
     return eachNight(selection.checkIn, selection.checkOut).includes(date)
   }
 
@@ -153,6 +153,13 @@ export function Timeline({
                       data-date={date}
                       onPointerDown={() => onNightDown(house.id, date, freeIn(house))}
                       onPointerEnter={() => onNightOver(house.id, date, freeIn(house))}
+                      // A free night acts on press and release, never on click. The click a
+                      // browser sends after a tap is aimed once the tap's own result is on
+                      // screen, so it lands on whatever just appeared under the finger — the
+                      // bar holding the first night, or a sheet — and presses that instead.
+                      onTouchEnd={(event) => {
+                        if (event.cancelable) event.preventDefault()
+                      }}
                     >
                       <span className="visually-hidden">
                         Свободно, {date}, {house.name}

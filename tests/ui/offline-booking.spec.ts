@@ -32,7 +32,7 @@ async function goToMonth(page: Page, month: string): Promise<void> {
 const night = (page: Page, date: string) =>
   page.locator(`[data-testid="night-cell"][data-date="${date}"][data-house="${HOUSE}"]`)
 
-/** A press on the first night and a release on the last: a drag, as a thumb makes it. */
+/** A press on the first night and a release on the last: a drag, as a mouse makes it. */
 async function pickNights(page: Page, checkIn: string, lastNight: string): Promise<void> {
   await night(page, checkIn).hover()
   await page.mouse.down()
@@ -90,6 +90,8 @@ test('a cold reload while offline still reaches the calendar and a booking can b
   const checkIn = await lastNight.getAttribute('data-date')
   if (checkIn === null) throw new Error('no cached night cell survived the reload')
 
+  // Twice: a one-night stay's night is both the first and the last one picked.
+  await lastNight.click()
   await lastNight.click()
   await expect(page.getByRole('dialog', { name: 'Новая бронь' })).toBeVisible()
   // Settings — the currency `NewBooking` needs to enable Save — came back from the offline
@@ -136,6 +138,7 @@ test('a booking taken with no signal reaches the engine when the signal returns'
   // The grid stays up and says plainly that it is not live, rather than pretending to be.
   await expect(page.getByText('Нет сети. Календарь показан на память.')).toBeVisible()
 
+  await night(page, checkIn).click()
   await night(page, checkIn).click()
   await expect(page.getByRole('dialog', { name: 'Новая бронь' })).toBeVisible()
   await page.getByLabel('Имя').fill('Аня')

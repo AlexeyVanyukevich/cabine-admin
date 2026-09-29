@@ -71,9 +71,12 @@ test.describe('Дома', () => {
     await page.getByRole('link', { name: 'Календарь' }).click()
     const { checkIn } = stay(3)
     await goToMonth(page)
-    await page
-      .locator(`[data-testid="night-cell"][data-date="${checkIn}"][data-house="${HOUSE}"]`)
-      .click()
+    // Twice: a one-night stay's night is both the first and the last one picked.
+    const night = page.locator(
+      `[data-testid="night-cell"][data-date="${checkIn}"][data-house="${HOUSE}"]`,
+    )
+    await night.click()
+    await night.click()
 
     await expect(page.getByLabel('Купель')).toBeVisible()
   })

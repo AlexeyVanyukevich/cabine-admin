@@ -262,5 +262,9 @@ export function NewBooking({ house, checkIn, checkOut, onCancel, onSaved, initia
 }
 
 export function formatStay(checkIn: string, checkOut: string): string {
-  return `${checkIn.slice(8, 10)}.${checkIn.slice(5, 7)} — ${checkOut.slice(8, 10)}.${checkOut.slice(5, 7)}`
+  return `${formatNight(checkIn)} — ${formatNight(checkOut)}`
+}
+
+export function formatNight(date: string): string {
+  return `${date.slice(8, 10)}.${date.slice(5, 7)}`
 }

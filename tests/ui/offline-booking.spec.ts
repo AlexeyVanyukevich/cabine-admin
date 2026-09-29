@@ -222,8 +222,11 @@ test('a night taken while offline is escalated, not silently dropped', async ({
 
   // Escalated to the owner, with the details kept — never silently dropped and never retried
   // into a second booking of the same nights.
-  await expect(page.getByText(/требует внимания|требуют внимания/)).toBeVisible()
-  await page.getByText(/требует внимания|требуют внимания/).click()
+  // The banner's own wording: the refused night on the grid also says "требует внимания", to a
+  // screen reader, and appears only once the calendar has redrawn with it.
+  const banner = page.getByText(/^(Одна бронь требует|\d+ брони требуют) внимания$/)
+  await expect(banner).toBeVisible()
+  await banner.click()
   await page.getByRole('button', { name: 'Разобраться' }).click()
   await expect(page.getByText(/Эти ночи заняли/)).toBeVisible()
   // Exact: "заняли" itself contains the substring "аня", so a loose match would pass even if

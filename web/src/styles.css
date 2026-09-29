@@ -32,6 +32,8 @@
   --radius: 10px;
   --radius-sm: 6px;
   --tap: 44px;
+  /* The bottom bar's own height, without its border or the safe-area inset below it. */
+  --nav-h: 52px;
 
   --shadow-low: 0 1px 2px rgb(22 33 31 / 0.07);
   --shadow-lift: 0 6px 20px rgb(22 33 31 / 0.13);

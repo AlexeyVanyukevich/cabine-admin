@@ -49,12 +49,18 @@ async function goToMonth(page: Page, month: string): Promise<void> {
 const night = (page: Page, date: string) =>
   page.locator(`[data-testid="night-cell"][data-date="${date}"][data-house="${HOUSE}"]`)
 
-/** A press on the first night and a release on the last: a drag, as a thumb makes it. */
+/** A press on the first night and a release on the last: a drag, as a mouse makes it. */
 async function pickNights(page: Page, checkIn: string, lastNight: string): Promise<void> {
   await night(page, checkIn).hover()
   await page.mouse.down()
   await night(page, lastNight).hover()
   await page.mouse.up()
+}
+
+/** A one-night stay: its night is both the first and the last one picked. */
+async function pickOneNight(page: Page, date: string): Promise<void> {
+  await night(page, date).click()
+  await night(page, date).click()
 }
 
 test('picks free nights and books them', async ({ page }) => {
@@ -103,7 +109,7 @@ test('two stays meet on a departure date without overlapping', async ({ page }) 
 
   // The departure date is free, because the first guest leaves that morning.
   await expect(night(page, checkOut)).toHaveAttribute('data-available', 'true')
-  await night(page, checkOut).click()
+  await pickOneNight(page, checkOut)
   await expect(page.getByRole('dialog', { name: 'Новая бронь' })).toBeVisible()
 })
 
@@ -131,7 +137,7 @@ test('records a payment against a booking', async ({ page }) => {
   await signIn(page)
   await goToMonth(page, month)
 
-  await night(page, checkIn).click()
+  await pickOneNight(page, checkIn)
   await page.getByLabel('Имя').fill('Пётр')
   await page.getByLabel('Телефон').fill('+7 912 000 11 22')
   await page.getByRole('button', { name: 'Сохранить' }).click()
@@ -153,7 +159,7 @@ test('cancelling a booking frees its nights', async ({ page }) => {
   await signIn(page)
   await goToMonth(page, month)
 
-  await night(page, checkIn).click()
+  await pickOneNight(page, checkIn)
   await page.getByLabel('Имя').fill('Ольга')
   await page.getByLabel('Телефон').fill('+7 912 777 88 99')
   await page.getByRole('button', { name: 'Сохранить' }).click()
@@ -187,4 +193,66 @@ test('a long guest name does not push the other house off its row', async ({ pag
   const lane = (await page.locator('.timeline__house', { hasText: 'Второй дом' }).boundingBox())!
   expect(Math.abs(other.x - lane.x)).toBeLessThan(1)
   expect(other.x + other.width).toBeLessThanOrEqual(page.viewportSize()!.width)
+})
+
+test.describe('on a touch screen', () => {
+  test.use({ hasTouch: true, isMobile: true })
+
+  // A finger cannot drag across nights: the browser keeps the touch on the night it began on.
+  // The tap that finishes a stay also must not fall through to the sheet it opens and close it.
+  test('tapping the first night and then the last books the stay', async ({ page }) => {
+    const { checkIn, month } = stay(26)
+    const lastNight = addDays(checkIn, 1)
+    await signIn(page)
+    await goToMonth(page, month)
+
+    await night(page, checkIn).tap()
+    await expect(page.getByRole('status')).toContainText('последнюю ночь')
+    await expect(page.getByRole('dialog', { name: 'Новая бронь' })).toBeHidden()
+
+    await night(page, lastNight).tap()
+    const sheet = page.getByRole('dialog', { name: 'Новая бронь' })
+    await expect(sheet).toBeVisible()
+    await expect(sheet).toContainText('2 ночи')
+    // Still open once the tap has fully played out, including the click that trails it.
+    await page.waitForTimeout(300)
+    await expect(sheet).toBeVisible()
+
+    await page.getByLabel('Имя').fill('Вера')
+    await page.getByLabel('Телефон').fill('+7 912 333 44 55')
+    await page.getByRole('button', { name: 'Сохранить' }).click()
+    await expect(page.getByTestId('booking-bar').filter({ hasText: 'Вера' })).toBeVisible()
+  })
+
+  // The bar that holds the first night appears at the bottom of the screen, which may be right
+  // under the finger that tapped it — and the click trailing that tap must not press its
+  // cancel button.
+  test('a night tapped just above the bottom bar stays picked', async ({ page }) => {
+    const { checkIn, month } = stay(15, 1)
+    await seedHouse('Второй дом', 'B')
+    await signIn(page)
+    await goToMonth(page, month)
+
+    const cell = page.locator(
+      `[data-testid="night-cell"][data-date="${checkIn}"][data-house="Второй дом"]`,
+    )
+    await cell.evaluate((el) => {
+      const box = el.getBoundingClientRect()
+      window.scrollBy(0, box.top + box.height / 2 - (window.innerHeight - 100))
+    })
+    await cell.tap()
+    await page.waitForTimeout(300)
+    await expect(page.getByRole('status')).toContainText('последнюю ночь')
+  })
+
+  test('the first night can be let go of', async ({ page }) => {
+    const { checkIn, month } = stay(21, 1)
+    await signIn(page)
+    await goToMonth(page, month)
+
+    await night(page, checkIn).tap()
+    await page.getByRole('status').getByRole('button', { name: 'Отмена' }).tap()
+    await expect(page.getByRole('status')).toBeHidden()
+    await expect(night(page, checkIn)).not.toHaveClass(/timeline__cell--picked/)
+  })
 })

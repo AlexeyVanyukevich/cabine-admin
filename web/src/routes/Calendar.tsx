@@ -5,7 +5,7 @@ import { Screen } from '../ui/Screen'
 import { Timeline } from '../calendar/Timeline'
 import { useSelection } from '../calendar/useSelection'
 import { monthBounds, monthName, shiftMonth, today } from '../calendar/nights'
-import { NewBooking, type RebookRequest } from '../booking/NewBooking'
+import { NewBooking, formatNight, type RebookRequest } from '../booking/NewBooking'
 import { BookingDetails } from '../booking/BookingDetails'
 import { applyIntents, type OverlayBooking } from '../offline/overlay'
 import { dropIntent } from '../offline/db'
@@ -30,7 +30,7 @@ interface Props {
    * Set once, from the conflict screen's "Выбрать другие даты": the guest, price, add-ons and
    * deposit of a refused booking, carried over into whichever nights are picked next. The house
    * and the nights are deliberately not part of this — the engine's refusal was about occupancy,
-   * so occupancy is exactly what the owner re-decides, on this same grid, by dragging as usual.
+   * so occupancy is exactly what the owner re-decides, on this same grid, by picking nights as usual.
    * Paired with the refused intent's id so it can be dropped once the replacement is saved.
    */
   rebooking?: RebookRequest
@@ -81,16 +81,19 @@ export function Calendar({ sync, onOpenTray, onStaleNotice, rebooking, onRebookH
       ? undefined
       : applyIntents(calendar.data, sync.intents, houses.data ?? [])
 
-  // A pointer released anywhere ends the gesture, so a drag that leaves the grid still
-  // finishes with the range it had rather than sticking to the cursor.
-  const [picking, setPicking] = useState(false)
+  // A pointer released anywhere ends the press, so a drag that leaves the grid still finishes
+  // with the range it had rather than sticking to the cursor. A cancelled one is a finger that
+  // began scrolling the grid, which is not a tap on the night it happened to start on.
   useEffect(() => {
-    function up() {
-      setPicking(false)
-    }
+    const up = () => dispatch({ type: 'up' })
+    const abandon = () => dispatch({ type: 'abandon' })
     window.addEventListener('pointerup', up)
-    return () => window.removeEventListener('pointerup', up)
-  }, [])
+    window.addEventListener('pointercancel', abandon)
+    return () => {
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', abandon)
+    }
+  }, [dispatch])
 
   // A sync round that actually sent something turns a queued booking into a real one. The
   // calendar fetch that produced `calendar.data` predates that, so without this it would render
@@ -140,9 +143,9 @@ export function Calendar({ sync, onOpenTray, onStaleNotice, rebooking, onRebookH
   }
 
   const pickedHouse =
-    selection.kind === 'selecting'
-      ? houses.data?.find((house) => house.id === selection.houseId)
-      : undefined
+    selection.kind === 'idle'
+      ? undefined
+      : houses.data?.find((house) => house.id === selection.houseId)
 
   return (
     <Screen title="Календарь">
@@ -190,7 +193,7 @@ export function Calendar({ sync, onOpenTray, onStaleNotice, rebooking, onRebookH
 
         {overlay && overlay.houses.length > 0 && (
           <>
-            <p className="hint">Нажмите на свободную ночь, чтобы завести бронь.</p>
+            <p className="hint">Нажмите на первую ночь брони, затем на последнюю.</p>
             <Timeline
               from={from}
               to={to}
@@ -198,23 +201,37 @@ export function Calendar({ sync, onOpenTray, onStaleNotice, rebooking, onRebookH
               bookings={overlay.bookings}
               selection={selection}
               onOpenBooking={openBooking}
-              onNightDown={(houseId, date, free) => {
-                setPicking(true)
-                dispatch({ type: 'start', date, houseId, free })
-              }}
-              onNightOver={(houseId, date, free) => {
-                if (picking && selection.kind === 'selecting' && selection.houseId === houseId) {
-                  dispatch({ type: 'over', date, free })
-                }
-              }}
+              onNightDown={(houseId, date, free) => dispatch({ type: 'down', date, houseId, free })}
+              onNightOver={(houseId, date, free) => dispatch({ type: 'over', date, houseId, free })}
             />
           </>
         )}
       </div>
 
-      {/* Only once the gesture ends. Opening it on the first press would put the sheet over
-          the grid before the owner had finished choosing how many nights. */}
-      {selection.kind === 'selecting' && !picking && pickedHouse !== undefined && (
+      {/* Pinned above the bottom bar, because between the two taps the owner scrolls to find
+          the last night and the first one leaves the screen. */}
+      {selection.kind === 'anchored' && (
+        <div className="pickbar" role="status">
+          <p className="pickbar__text">
+            <strong>
+              С {formatNight(selection.checkIn)}
+              {pickedHouse === undefined ? '' : ` · ${pickedHouse.name}`}
+            </strong>
+            <span>Нажмите на последнюю ночь или ещё раз на эту</span>
+          </p>
+          <button
+            className="pickbar__cancel"
+            type="button"
+            onClick={() => dispatch({ type: 'cancel' })}
+          >
+            Отмена
+          </button>
+        </div>
+      )}
+
+      {/* Only once the last night is picked. Opening it on the first press would put the sheet
+          over the grid before the owner had finished choosing how many nights. */}
+      {selection.kind === 'chosen' && pickedHouse !== undefined && (
         <NewBooking
           house={pickedHouse}
           checkIn={selection.checkIn}

@@ -1,5 +1,16 @@
 # Offline Bookings — Create Path Implementation Plan
 
+Status: **executed**, 2026-09-29. Archived.
+
+> **This plan is spent scaffolding, kept for provenance.**
+>
+> Its job ended when the work shipped, and it sits outside the reading path. Several of its code
+> blocks were wrong and were corrected during execution — the replay guard, the cached-fallback
+> keying, the sync loop's write sequence — so it is not a safe thing to copy from. What review
+> found is recorded in
+> [the review record](2026-09-29-offline-bookings-create-review-record.md); what the system does
+> today is in [docs/architecture.md](../../../architecture.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Let the owner record a _new_ booking with no network at all, and have it become a real engine booking when connectivity returns — including when the engine refuses the night.

@@ -48,8 +48,8 @@
 }
 
 .sheet__close {
-  width: 36px;
-  height: 36px;
+  width: var(--tap);
+  height: var(--tap);
   flex: none;
   border: none;
   background: var(--surface-sunk);

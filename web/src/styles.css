@@ -151,6 +151,19 @@ textarea {
   border-radius: var(--radius-sm);
 }
 
+/*
+ * The browser's tap highlight is a flat rectangle, drawn square over rounded buttons and stays.
+ * A pressed control dims instead. Free nights are excluded: being marked picked on press is
+ * their feedback, and a drag would otherwise leave its first night dimmed throughout.
+ */
+:where(a, button, label, [role='button']) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where(a, button):active:not(:disabled, .timeline__cell--free) {
+  opacity: 0.7;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

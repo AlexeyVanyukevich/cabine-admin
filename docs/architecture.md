@@ -471,7 +471,9 @@ Every signed-in screen shares one frame — `web/src/ui/Screen.tsx`, with its la
 and the frame owns the gap under its own title bar, so a screen cannot forget to leave one.
 Forms live in `Sheet`, whose title and footer are pinned either side of a scrolling body: a long
 form must never carry its own controls off the bottom of a phone. A pinned button reaches the
-form it submits through the `form` attribute, since the two are no longer nested.
+form it submits through the `form` attribute, since the two are no longer nested. The backdrop
+closes a sheet only for a press that began on it: the click that trails a tap is aimed after the
+sheet has appeared, lands on the backdrop, and would otherwise close the sheet that tap opened.
 
 ---
 

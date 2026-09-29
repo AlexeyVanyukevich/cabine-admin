@@ -457,6 +457,9 @@ message beats forwarding a request the engine will reject anyway.
 Dragging across free nights opens the booking form with the range filled in; occupied nights
 cannot be included in a selection.
 
+Every row of the timeline is a grid of its own, so each lane is `minmax(0, 1fr)`: a lane sized by
+a long guest name would shift that one row's other houses sideways and out of view.
+
 There are no optimistic updates. Every change invalidates and refetches. Showing the owner a
 stale calendar at the moment they decide whether a guest fits is the one case where an instant
 response is worse than the truth.

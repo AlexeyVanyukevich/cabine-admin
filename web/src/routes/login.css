@@ -93,8 +93,10 @@
   transition: background 120ms ease;
 }
 
-.login__submit:hover:not(:disabled) {
-  background: var(--water-deep);
+@media (hover: hover) {
+  .login__submit:hover:not(:disabled) {
+    background: var(--water-deep);
+  }
 }
 
 .login__submit:disabled {

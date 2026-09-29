@@ -41,6 +41,11 @@ reader's timezone.
 OpenAPI document via `npm run engine:types`. Never hand-edit it, and never hand-write a parallel
 copy of the engine's types.
 
+**Styles are for a phone first.** Tap targets are at least `var(--tap)` (44px). A `:hover` rule
+goes inside `@media (hover: hover)`, because a touch screen keeps `:hover` on whatever was
+tapped last. A gesture works with a finger as well as a mouse, and a browser journey that
+matters on a phone runs with touch (`hasTouch`) rather than a mouse.
+
 **Layout.** Server code is `server/src/modules/<area>/` with `*.repository.ts`, `*.service.ts`,
 `*.routes.ts` and `*.schemas.ts`; pure helpers live in `server/src/shared/`. Tests are
 `server/tests/{unit,integration}/` and `tests/ui/` for browser journeys.

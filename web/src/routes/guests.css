@@ -30,8 +30,10 @@
   min-height: var(--tap);
 }
 
-.guests__row:hover {
-  background: var(--surface-sunk);
+@media (hover: hover) {
+  .guests__row:hover {
+    background: var(--surface-sunk);
+  }
 }
 
 .guests__name {

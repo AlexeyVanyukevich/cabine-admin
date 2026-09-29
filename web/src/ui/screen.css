@@ -52,7 +52,9 @@
   cursor: pointer;
 }
 
-.signout:hover {
-  border-color: var(--alert);
-  color: var(--alert);
+@media (hover: hover) {
+  .signout:hover {
+    border-color: var(--alert);
+    color: var(--alert);
+  }
 }

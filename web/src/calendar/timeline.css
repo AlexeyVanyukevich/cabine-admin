@@ -146,6 +146,13 @@
   border-radius: 0 0 var(--radius-sm) var(--radius-sm);
 }
 
+/* Over the row's own bottom border, so the nights of one stay join into one block instead of
+   a stack of tiles with a line between each night. */
+.timeline__cell--start::before,
+.timeline__cell--middle::before {
+  bottom: -1px;
+}
+
 .timeline__cell--only::before {
   inset: 3px;
   border-radius: var(--radius-sm);

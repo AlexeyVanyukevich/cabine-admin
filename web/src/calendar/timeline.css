@@ -102,8 +102,16 @@
   text-align: left;
 }
 
-.timeline__cell--free:hover {
-  background: var(--water-soft);
+/* Pointer devices only: a touch screen keeps `:hover` on the night tapped last, where it would
+   read as a night still picked. */
+@media (hover: hover) {
+  .timeline__cell--free:hover {
+    background: var(--water-soft);
+  }
+
+  .timeline__cell--lit:hover::before {
+    filter: brightness(0.95);
+  }
 }
 
 /* Nights the owner has picked but not yet saved: clearly chosen, clearly not yet a booking. */
@@ -205,10 +213,6 @@
   height: 7px;
   border-radius: 50%;
   background: var(--alert);
-}
-
-.timeline__cell--lit:hover::before {
-  filter: brightness(0.95);
 }
 
 .timeline__label {

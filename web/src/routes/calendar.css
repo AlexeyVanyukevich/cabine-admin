@@ -26,9 +26,11 @@
   cursor: pointer;
 }
 
-.monthbar__step:hover {
-  border-color: var(--water);
-  color: var(--water);
+@media (hover: hover) {
+  .monthbar__step:hover {
+    border-color: var(--water);
+    color: var(--water);
+  }
 }
 
 .hint {

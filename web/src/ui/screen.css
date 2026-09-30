@@ -6,10 +6,43 @@
    This is what keeps `.nav`'s own `position: sticky; bottom: 0` pinned to the viewport bottom on
    a short screen like Guests or Houses, rather than sitting wherever the content happens to end. */
 .page {
+  /* How wide a screen's content grows on a large display; a screen's bar lines up with it. */
+  --content-w: 900px;
+  /* The side margin of a screen's content, which its bar keeps too. */
+  --gutter: 16px;
   min-height: 100vh;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
+}
+
+/*
+ * The one sticky box at the top of every signed-in screen: the title bar, then the connection
+ * banner, then the screen's own notice. They share a box because two independent `top: 0`
+ * sticky elements land on the same spot and overlap rather than stack, and none of them has a
+ * fixed height to offset another by. Its live height is published as `--chrome-h` on `.page`
+ * (Screen.tsx), and the bottom bar's as `--nav-h`, so anything a screen keeps clear of either
+ * offsets by those.
+ *
+ * A child of `.page`, not a sibling above it: `.page` is at least one viewport tall, and a bar
+ * outside it would make a short screen scroll by the bar's height. `#root` must keep no height
+ * rule and no `display: flex` for this to stick at all — see the note there in styles.css.
+ */
+.app-chrome {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--paper);
+}
+
+.app-chrome__notice {
+  margin: 0;
+  padding: 6px 1rem;
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+  text-align: center;
+  background: var(--surface-sunk);
+  border-bottom: 1px solid var(--line);
 }
 
 .topbar {
@@ -17,10 +50,16 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 16px;
+  padding: 10px var(--gutter);
   padding-top: calc(10px + env(safe-area-inset-top));
   background: var(--surface);
   border-bottom: 1px solid var(--line);
+}
+
+/* A screen's own bar holds tap targets, which bring their own height. */
+.topbar--bar {
+  padding-top: calc(4px + env(safe-area-inset-top));
+  padding-bottom: 4px;
 }
 
 .topbar__title {
@@ -33,8 +72,8 @@
    gap under the topbar, because only one of them ever remembered to. */
 .page__body {
   flex: 1;
-  padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
-  max-width: 900px;
+  padding: 16px var(--gutter) calc(24px + env(safe-area-inset-bottom));
+  max-width: var(--content-w);
   width: 100%;
   margin: 0 auto;
 }
@@ -43,7 +82,7 @@
   display: block;
   width: 100%;
   margin: 24px 0 8px;
-  height: var(--tap);
+  min-height: var(--tap);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
   background: transparent;

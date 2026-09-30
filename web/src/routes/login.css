@@ -61,7 +61,7 @@
 }
 
 .login__input {
-  height: var(--tap);
+  min-height: var(--tap);
   padding: 0 12px;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
@@ -82,7 +82,7 @@
 
 .login__submit {
   margin-top: 20px;
-  height: var(--tap);
+  min-height: var(--tap);
   border: none;
   border-radius: var(--radius-sm);
   background: var(--water);

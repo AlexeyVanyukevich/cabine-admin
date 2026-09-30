@@ -46,6 +46,18 @@ goes inside `@media (hover: hover)`, because a touch screen keeps `:hover` on wh
 tapped last. A gesture works with a finger as well as a mouse, and a browser journey that
 matters on a phone runs with touch (`hasTouch`) rather than a mouse.
 
+**Sizes are flexible until something requires otherwise.** A box grows with its content: tap
+targets are `min-height`/`min-width: var(--tap)`, not `height`, and widths are bounded with
+`max-width` or grid fractions rather than set. An offset that depends on another box's height
+uses that box's live height, published by `usePublishedHeight` (`web/src/ui/`), never a sum of
+numbers copied from its stylesheet. A size that must be fixed says why beside it.
+
+**One thing is pinned to the top: the frame's sticky box** (`.app-chrome`, `web/src/ui/`).
+Anything else that must stay at the top goes inside it; anything pinned below it inside a screen
+uses `top: var(--chrome-h)`, and anything kept clear of the bottom bar uses `var(--nav-h)`. A
+container around a sticky element clips with `overflow: clip`, not `hidden` — `hidden` makes it a
+scroll container, and the element then sticks inside it instead of to the screen.
+
 **Layout.** Server code is `server/src/modules/<area>/` with `*.repository.ts`, `*.service.ts`,
 `*.routes.ts` and `*.schemas.ts`; pure helpers live in `server/src/shared/`. Tests are
 `server/tests/{unit,integration}/` and `tests/ui/` for browser journeys.

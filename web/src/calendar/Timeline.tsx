@@ -5,6 +5,7 @@ import type { SelectionState } from './useSelection'
 import { eachNight, isWeekend, today, weekday } from './nights'
 import { currencyOf, money } from '../money'
 import { useSettings } from '../settings'
+import { usePublishedHeight } from '../ui/usePublishedHeight'
 import './timeline.css'
 
 interface Props {
@@ -55,6 +56,11 @@ export function Timeline({
   // of a change, and neither may borrow the other's symbol.
   const currencies = useSettings().data?.currencies
   const todayRow = useRef<HTMLDivElement>(null)
+  const timeline = useRef<HTMLDivElement>(null)
+  const head = useRef<HTMLDivElement>(null)
+
+  // The house names are pinned, and a row scrolled into view has to land clear of them.
+  usePublishedHeight(head, timeline, '--head-h')
 
   // Opening the calendar should land on now, not on the 1st. Only when the month in view is
   // the one containing today, so paging to another month keeps its own top.
@@ -82,12 +88,13 @@ export function Timeline({
 
   return (
     <div
+      ref={timeline}
       className="timeline"
       style={{ '--lanes': houses.length } as React.CSSProperties}
       // A drag that ends outside a cell still ends the gesture.
       onPointerLeave={() => undefined}
     >
-      <div className="timeline__head">
+      <div ref={head} className="timeline__head">
         <div className="timeline__corner" />
         {houses.map((house) => (
           <div key={house.id} className="timeline__house" title={house.name}>

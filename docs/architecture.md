@@ -482,6 +482,18 @@ client-side route survives a reload.
 
 Every signed-in screen shares one frame — `web/src/ui/Screen.tsx`, with its layout beside it —
 and the frame owns the gap under its own title bar, so a screen cannot forget to leave one.
+
+The top of the frame is one sticky box, pinned while the screen scrolls: the title bar, then the
+connection banner, then any notice the screen raises about its own data (the calendar's "на
+память" stamp). They share a box because two elements each stuck to the top land on the same spot
+and cover one another, and none of them has a fixed height — the banner's text wraps. The frame
+publishes the box's live height as `--chrome-h`, and the bottom bar's as `--nav-h`, and a screen
+offsets by those rather than by numbers of its own: the calendar's house names sit directly under
+the box, its rows scroll clear of both edges when today is brought into view, and the bar holding
+the first night picked sits just above the bottom bar. A screen may put its own bar in place of the title — the
+calendar puts the month and its arrows there, so the month on screen is always named and can be
+changed from the last night as well as the first. The title stays as a visually hidden `h1`. The
+login screen has no frame and pins the banner in a box of its own.
 Forms live in `Sheet`, whose title and footer are pinned either side of a scrolling body: a long
 form must never carry its own controls off the bottom of a phone. A pinned button reaches the
 form it submits through the `form` attribute, since the two are no longer nested. The backdrop

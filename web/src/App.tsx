@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { api, isOffline, NotSignedIn } from './api'
@@ -7,6 +7,7 @@ import { Calendar } from './routes/Calendar'
 import { Guests } from './routes/Guests'
 import { Houses } from './routes/Houses'
 import { messageFor } from './errors'
+import { ChromeBanner } from './ui/Screen'
 import { ConnectionBanner } from './offline/ConnectionBanner'
 import { SyncTray } from './offline/SyncTray'
 import { ConflictScreen } from './offline/ConflictScreen'
@@ -80,14 +81,6 @@ function AppShell() {
   const [trayOpen, setTrayOpen] = useState(false)
   const openTray = () => setTrayOpen(true)
 
-  // Calendar's own staleness line, reported up rather than rendered where it's computed: it has
-  // to sit right beside `ConnectionBanner` inside the one sticky wrapper below, because two
-  // independently `position: sticky` elements at the same offset overlap instead of stacking —
-  // there is no fixed height to offset the second one by, since the banner's own text varies.
-  // Sharing one sticky ancestor sidesteps that arithmetic entirely.
-  const [staleNotice, setStaleNotice] = useState<string | undefined>()
-  const onStaleNotice = useCallback((notice: string | undefined) => setStaleNotice(notice), [])
-
   // The conflict the owner is currently looking at, and the draft it hands to whichever
   // `NewBooking` sheet the owner opens next. Two separate pieces of state rather than one: the
   // screen closes the moment an action is chosen, but the draft has to survive until a fresh
@@ -132,29 +125,34 @@ function AppShell() {
     if (location.pathname !== '/') navigate('/')
   }
 
+  const banner = (
+    <ConnectionBanner
+      outcome={sync.outcome}
+      intents={sync.intents}
+      onOpenTray={openTray}
+      // A full navigation, not a client-side one: the session is gone, so there is nothing an
+      // in-app route change can do that a fresh load of /login cannot, and it matches how
+      // `Trouble` above recovers from its own dead end.
+      onRetry={() => window.location.assign('/login')}
+    />
+  )
+
   return (
-    <>
-      {/* Pinned to the top of the viewport. `Timeline` calls `scrollIntoView({block:'center'})`
-          on mount (web/src/calendar/Timeline.tsx), which on a mid-month day scrolls the whole
-          page well past here before the owner has read anything — this has to survive that. */}
-      <div className="app-chrome">
-        <ConnectionBanner
-          outcome={sync.outcome}
-          intents={sync.intents}
-          onOpenTray={openTray}
-          // A full navigation, not a client-side one: the session is gone, so there is nothing an
-          // in-app route change can do that a fresh load of /login cannot, and it matches how
-          // `Trouble` above recovers from its own dead end.
-          onRetry={() => window.location.assign('/login')}
-        />
-        {staleNotice !== undefined && (
-          <p className="app-chrome__notice" role="status">
-            {staleNotice}
-          </p>
-        )}
-      </div>
+    // Drawn inside each screen's own pinned box (`Screen`), which it has to share: `Timeline`
+    // calls `scrollIntoView` on mount, which on a mid-month day scrolls well past the top before
+    // the owner has read anything.
+    <ChromeBanner.Provider value={banner}>
       <Routes>
-        <Route path="/login" element={<Login onSignedIn={sync.syncNow} />} />
+        <Route
+          path="/login"
+          element={
+            <>
+              {/* Login has no frame, so the banner gets a pinned box of its own. */}
+              <div className="app-chrome">{banner}</div>
+              <Login onSignedIn={sync.syncNow} />
+            </>
+          }
+        />
         <Route
           path="/"
           element={
@@ -162,7 +160,6 @@ function AppShell() {
               <Calendar
                 sync={sync}
                 onOpenTray={openTray}
-                onStaleNotice={onStaleNotice}
                 {...(rebooking === undefined ? {} : { rebooking })}
                 onRebookHandled={() => setRebooking(undefined)}
               />
@@ -205,6 +202,6 @@ function AppShell() {
           onDiscard={discard}
         />
       )}
-    </>
+    </ChromeBanner.Provider>
   )
 }

@@ -32,8 +32,9 @@
   --radius: 10px;
   --radius-sm: 6px;
   --tap: 44px;
-  /* The bottom bar's own height, without its border or the safe-area inset below it. */
-  --nav-h: 52px;
+  /* The bottom bar's least height, without its border or the safe-area inset below it. What it
+     actually takes up is measured, as `--nav-h` on the frame (Screen.tsx). */
+  --nav-min-h: 52px;
 
   --shadow-low: 0 1px 2px rgb(22 33 31 / 0.07);
   --shadow-lift: 0 6px 20px rgb(22 33 31 / 0.13);
@@ -89,7 +90,7 @@ body {
  *
  * 1. `#root { height: 100% }` (the original rule): fixed at exactly the viewport height, so it
  *    never grows for a taller page (a full month of Timeline rows routinely is). Content past it
- *    still renders — nothing here clips — but `position: sticky` on `.app-chrome` (App.tsx) is
+ *    still renders — nothing here clips — but `position: sticky` on `.app-chrome` (screen.css) is
  *    bounded by its OWN containing block's box, not by whatever visually overflows it, so it
  *    stays "stuck" only within that fixed 100vh window and scrolls away with everything else past
  *    one screen of content.
@@ -162,6 +163,18 @@ textarea {
 
 :where(a, button):active:not(:disabled, .timeline__cell--free) {
   opacity: 0.7;
+}
+
+/* Read by a screen reader, drawn nowhere. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -14,7 +14,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: var(--nav-h);
+  min-height: var(--nav-min-h);
   text-decoration: none;
   color: var(--ink-faint);
   font-size: 14px;

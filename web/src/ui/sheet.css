@@ -48,8 +48,8 @@
 }
 
 .sheet__close {
-  width: var(--tap);
-  height: var(--tap);
+  min-width: var(--tap);
+  min-height: var(--tap);
   flex: none;
   border: none;
   background: var(--surface-sunk);
@@ -98,7 +98,7 @@
 
 .field__input {
   width: 100%;
-  height: var(--tap);
+  min-height: var(--tap);
   padding: 0 12px;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
@@ -107,7 +107,6 @@
 }
 
 textarea.field__input {
-  height: auto;
   min-height: 72px;
   padding: 10px 12px;
   resize: vertical;
@@ -183,7 +182,7 @@ textarea.field__input {
 
 .btn {
   flex: 1;
-  height: var(--tap);
+  min-height: var(--tap);
   border: none;
   border-radius: var(--radius-sm);
   font-size: 16px;

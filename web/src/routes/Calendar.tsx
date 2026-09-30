@@ -19,13 +19,6 @@ interface Props {
   /** A pending booking has no engine id, so its details sheet has nothing to fetch — this opens
    *  the tray instead. */
   onOpenTray: () => void
-  /** The calendar's own staleness line, rendered by `App.tsx` next to `ConnectionBanner` rather
-   *  than here: both need to survive `Timeline`'s scroll-into-view on mount, and the only way to
-   *  do that without hand-measuring one sticky element to offset the other is to let them share
-   *  a single sticky ancestor — which lives in `App.tsx`, not in this route. `undefined` clears
-   *  it, including on unmount, so leaving the calendar for another screen does not leave a
-   *  months-old stamp glued to the top of the app. */
-  onStaleNotice: (notice: string | undefined) => void
   /**
    * Set once, from the conflict screen's "Выбрать другие даты": the guest, price, add-ons and
    * deposit of a refused booking, carried over into whichever nights are picked next. The house
@@ -57,7 +50,7 @@ function stampMoment(fetchedAt: string): string {
   return date === today() ? time : `${pad(at.getDate())}.${pad(at.getMonth() + 1)} ${time}`
 }
 
-export function Calendar({ sync, onOpenTray, onStaleNotice, rebooking, onRebookHandled }: Props) {
+export function Calendar({ sync, onOpenTray, rebooking, onRebookHandled }: Props) {
   const queryClient = useQueryClient()
   const [month, setMonth] = useState(() => monthBounds(today()).from)
   const [open, setOpen] = useState<Booking | undefined>()
@@ -110,16 +103,6 @@ export function Calendar({ sync, onOpenTray, onStaleNotice, rebooking, onRebookH
     void queryClient.invalidateQueries({ queryKey: ['calendar'] })
   }, [sync.syncSerial, queryClient])
 
-  // Reported to `App.tsx` rather than rendered here — see the prop's own doc comment.
-  useEffect(() => {
-    onStaleNotice(
-      calendar.stale && calendar.fetchedAt !== undefined
-        ? `Календарь на память, обновлён ${stampMoment(calendar.fetchedAt)}`
-        : undefined,
-    )
-    return () => onStaleNotice(undefined)
-  }, [calendar.stale, calendar.fetchedAt, onStaleNotice])
-
   /** Nothing is optimistic: the calendar is refetched, because a stale one costs money. */
   async function refresh(outcome: 'sent' | 'queued' = 'sent') {
     setOpen(undefined)
@@ -147,28 +130,40 @@ export function Calendar({ sync, onOpenTray, onStaleNotice, rebooking, onRebookH
       ? undefined
       : houses.data?.find((house) => house.id === selection.houseId)
 
-  return (
-    <Screen title="Календарь">
-      <div className="monthbar">
-        <button
-          className="monthbar__step"
-          type="button"
-          aria-label="Предыдущий месяц"
-          onClick={() => setMonth(shiftMonth(month, -1))}
-        >
-          ←
-        </button>
-        <p className="monthbar__title">{monthName(month)}</p>
-        <button
-          className="monthbar__step"
-          type="button"
-          aria-label="Следующий месяц"
-          onClick={() => setMonth(shiftMonth(month, 1))}
-        >
-          →
-        </button>
-      </div>
+  // In the pinned bar, so the month on screen is named, and can be changed, however far down
+  // the grid the owner has scrolled.
+  const monthbar = (
+    <div className="monthbar">
+      <button
+        className="monthbar__step"
+        type="button"
+        aria-label="Предыдущий месяц"
+        onClick={() => setMonth(shiftMonth(month, -1))}
+      >
+        ←
+      </button>
+      <p className="monthbar__title">{monthName(month)}</p>
+      <button
+        className="monthbar__step"
+        type="button"
+        aria-label="Следующий месяц"
+        onClick={() => setMonth(shiftMonth(month, 1))}
+      >
+        →
+      </button>
+    </div>
+  )
 
+  return (
+    <Screen
+      title="Календарь"
+      bar={monthbar}
+      notice={
+        calendar.stale && calendar.fetchedAt !== undefined
+          ? `Календарь на память, обновлён ${stampMoment(calendar.fetchedAt)}`
+          : undefined
+      }
+    >
       <div>
         {calendar.isPending && <p className="notice">Загружаем календарь…</p>}
 

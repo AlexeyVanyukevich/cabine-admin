@@ -15,7 +15,9 @@
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  overflow: hidden;
+  /* `clip`, not `hidden`: `hidden` makes this a scroll container, and the sticky house names
+     would then stick inside it rather than to the screen. */
+  overflow: clip;
 }
 
 /*

@@ -53,15 +53,6 @@ commit that fixes it.
 - Impact: a phone that goes offline right after its first visit shows the wrong typeface. Only
   the look is affected.
 
-## `manifest.json` is not precached
-
-- Where: `web/vite.config.ts`, `workbox.globPatterns`
-- Found: 2026-09-30, while testing offline mode locally
-- Problem: the pattern covers `js,css,html,png,woff2` but not `json`, so the hand-written
-  `/manifest.json` fails with `ERR_INTERNET_DISCONNECTED` on an offline reload.
-- Impact: none seen yet. An installed app already has its manifest; the failure is console noise
-  that hides errors that matter.
-
 ## Most tests keep their cases in the test body, not in a dataset
 
 - Where: `server/tests/integration/`, `web/tests/`, and some of `server/tests/unit/`

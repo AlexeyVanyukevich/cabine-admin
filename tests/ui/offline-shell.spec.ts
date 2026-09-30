@@ -22,6 +22,21 @@ test('the app shell still renders with the network cut', async ({ page, context 
   await expect(page.getByLabel('Пароль')).toBeVisible()
 })
 
+test('the worker precaches the web app manifest', async ({ page }) => {
+  await page.goto(appUrl('/'))
+  await page.waitForFunction(() => navigator.serviceWorker.controller !== null)
+
+  // Asked of the cache rather than watched on the wire: a headless browser never requests the
+  // manifest, so an offline reload would pass whether or not it could be served. The worker
+  // controls the page only after install, and install is when it precaches. `ignoreSearch`
+  // because Workbox keys an unhashed file by a revision parameter.
+  const cached = await page.evaluate(async () => {
+    const hit = await caches.match('/manifest.json', { ignoreSearch: true })
+    return hit !== undefined
+  })
+  expect(cached).toBe(true)
+})
+
 test('an API call is never served from the cache', async ({ page, context }) => {
   await seedHouse()
   await page.goto(appUrl('/'))

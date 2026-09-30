@@ -12,7 +12,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,png,woff2}'],
+        // The manifest is named rather than matched by extension, so a JSON file added to the
+        // build later is not precached without anyone deciding it should be.
+        globPatterns: ['**/*.{js,css,html,png,woff2}', 'manifest.json'],
         // A client-side route must survive a reload with no network, exactly as it survives one
         // with a network via the server's SPA fallback.
         navigateFallback: '/index.html',

@@ -90,8 +90,7 @@ test('a cold reload while offline still reaches the calendar and a booking can b
   const checkIn = await lastNight.getAttribute('data-date')
   if (checkIn === null) throw new Error('no cached night cell survived the reload')
 
-  // Twice: a one-night stay's night is both the first and the last one picked.
-  await lastNight.click()
+  // Once: a mouse click on a night books that night alone.
   await lastNight.click()
   await expect(page.getByRole('dialog', { name: 'Новая бронь' })).toBeVisible()
   // Settings — the currency `NewBooking` needs to enable Save — came back from the offline
@@ -138,7 +137,6 @@ test('a booking taken with no signal reaches the engine when the signal returns'
   // The grid stays up and says plainly that it is not live, rather than pretending to be.
   await expect(page.getByText('Нет сети. Календарь показан на память.')).toBeVisible()
 
-  await night(page, checkIn).click()
   await night(page, checkIn).click()
   await expect(page.getByRole('dialog', { name: 'Новая бронь' })).toBeVisible()
   await page.getByLabel('Имя').fill('Аня')

@@ -17,7 +17,7 @@ interface Props {
   bookings: OverlayBooking[]
   selection: SelectionState
   onOpenBooking: (booking: OverlayBooking) => void
-  onNightDown: (houseId: string, date: string, free: string[]) => void
+  onNightDown: (houseId: string, date: string, free: string[], pointerType: string) => void
   onNightOver: (houseId: string, date: string, free: string[]) => void
 }
 
@@ -158,12 +158,14 @@ export function Timeline({
                       data-available="true"
                       data-house={house.name}
                       data-date={date}
-                      onPointerDown={() => onNightDown(house.id, date, freeIn(house))}
+                      onPointerDown={(event) =>
+                        onNightDown(house.id, date, freeIn(house), event.pointerType)
+                      }
                       onPointerEnter={() => onNightOver(house.id, date, freeIn(house))}
                       // A free night acts on press and release, never on click. The click a
                       // browser sends after a tap is aimed once the tap's own result is on
                       // screen, so it lands on whatever just appeared under the finger — the
-                      // bar holding the first night, or a sheet — and presses that instead.
+                      // sheet that tap opened — and presses that instead.
                       onTouchEnd={(event) => {
                         if (event.cancelable) event.preventDefault()
                       }}

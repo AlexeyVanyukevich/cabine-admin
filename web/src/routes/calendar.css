@@ -1,13 +1,28 @@
 /* The calendar's title bar (`Screen`'s `bar`). As wide as the timeline under it — the content
    width less a gutter either side — so on a wide screen the arrows sit over the grid's edges
    rather than the window's. */
-.monthbar {
+.calbar {
   flex: 1;
   max-width: calc(var(--content-w) - 2 * var(--gutter));
   margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* The month and a held first night share one cell, so the bar is as tall with either showing
+   and the grid under it stays put when the owner taps. The month keeps its room while covered. */
+.calbar > * {
+  grid-area: 1 / 1;
+}
+
+.monthbar {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.monthbar--covered {
+  visibility: hidden;
 }
 
 .monthbar__title {
@@ -44,21 +59,26 @@
   color: var(--ink-faint);
 }
 
-/* Sits just above the bottom bar while the grid scrolls, so the first night picked stays in view
-   however far the last one is. */
+.hint--mouse {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hint--touch {
+    display: none;
+  }
+
+  .hint--mouse {
+    display: block;
+  }
+}
+
+/* Holds the first night picked while the owner scrolls to the last, in the month's place. Its lines
+   never wrap: a taller bar than the month's would push the grid down under the finger. */
 .pickbar {
-  position: sticky;
-  bottom: calc(var(--nav-h, 0px) + 8px);
-  z-index: 5;
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-top: 12px;
-  padding: 10px 10px 10px 14px;
-  background: var(--surface);
-  border: 1px solid var(--water);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-lift);
 }
 
 .pickbar__text {
@@ -72,12 +92,15 @@
   line-height: 1.3;
 }
 
-.pickbar__text strong {
-  font-size: 15px;
-  color: var(--ink);
+.pickbar__text > * {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.pickbar__text strong {
+  font-size: 15px;
+  color: var(--ink);
 }
 
 .pickbar__cancel {

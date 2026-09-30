@@ -454,16 +454,21 @@ booking listing plus availability per house, and this project's rows. The window
 366 nights, matching the bound the engine puts on its own listings — refusing here with a clear
 message beats forwarding a request the engine will reject anyway.
 
-A stay is picked by tapping its first night and then its last, in the same house; tapping the
-same night twice is a one-night stay. A finger cannot drag across the grid — the browser keeps
-a touch on the night it began on, and moving it scrolls — so two taps is the gesture, and a bar
-pinned above the bottom nav holds the first night while the owner scrolls to the last. A press
+On a touch screen a stay is picked by tapping its first night and then its last, in the same
+house; tapping the same night twice is a one-night stay. A finger cannot drag across the grid —
+the browser keeps a touch on the night it began on, and moving it scrolls — so two taps is the
+gesture. While the first night is held it takes the month's place in the pinned title bar, so it
+stays in view as the owner scrolls to the last. It is not pinned over the grid: there it would
+cover the nights right after the first, the likeliest last ones. The month and the held night
+share one cell, so the bar keeps its height and the grid does not move under the finger. A press
 the browser cancels because it became a scroll is not a tap. A free night acts on press and
 release and swallows the click that trails a tap: that click is aimed after the tap's result is
-on screen, and would otherwise press the bar that just appeared under the finger. With a mouse,
-a drag from the first night to the last works too. Occupied nights cannot be included: a second
-tap with one in between starts again from the tapped night rather than quietly shortening the
-stay.
+on screen, and would otherwise press the sheet that just opened under the finger.
+
+A mouse has no reason to click twice: a click on a night is a one-night stay, and a drag from the
+first night to the last picks several. The hint above the grid names whichever gesture the device
+makes. Either way, occupied nights cannot be included: a drag stops at one, and a second tap with
+one in between starts again from the tapped night rather than quietly shortening the stay.
 `web/src/calendar/useSelection.ts` is that state machine, and it is unit-tested apart from the
 DOM.
 

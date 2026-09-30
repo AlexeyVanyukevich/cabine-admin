@@ -24,6 +24,7 @@ Reference, consulted rather than read through:
 | Document                                                           | What it holds                                                                        |
 | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
 | [CLAUDE.md](CLAUDE.md)                                             | The invariants and a pointer to the above, addressed to an agent in the repository   |
+| [docs/backlog.md](docs/backlog.md)                                 | What is known to be wrong and not yet fixed, one entry each                          |
 | [server/src/engine/schema.d.ts](server/src/engine/schema.d.ts)     | The engine's contract, generated from its OpenAPI. Never hand-edited                 |
 | [docs/superpowers/specs/](docs/superpowers/specs/)                 | Decision records, one per slice — read for _why_, never for what                     |
 | [docs/superpowers/plans/archive/](docs/superpowers/plans/archive/) | The task-by-task plans that built each slice. Spent scaffolding, kept for provenance |

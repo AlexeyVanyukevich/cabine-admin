@@ -3,7 +3,7 @@
 ## The shared rules
 
 The conventions this project shares with its siblings — TypeScript, HTTP errors, code layout,
-testing, commits, documentation, writing and review — come from the `dev-kit`
+testing, commits, documentation, writing, review and the backlog — come from the `dev-kit`
 package, and are not restated here. After `npm install`, or the first `./run`, which does it,
 they are in `node_modules/dev-kit/rules/`, and `node_modules/dev-kit/README.md` says what each
 one covers.

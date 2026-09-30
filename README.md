@@ -190,6 +190,10 @@ its bookings for the whole run, so a test that needs free nights books its own w
 container serves the API and the app from one origin. It needs `DATABASE_URL`, `ENGINE_URL`
 and `ENGINE_API_KEY` in its environment, and a Postgres to talk to.
 
+The build context is what git would commit: `.dockerignore` mirrors `.gitignore`, so the
+machine running `docker build` contributes its sources and nothing it installed or built. A
+pattern added to one belongs in the other.
+
 The build stage needs GitHub as well as the npm registry: both workspaces' compiler settings
 come from `dev-kit`, a dev dependency installed from its git host at a pinned tag. The runtime
 image does not contain it.

@@ -42,15 +42,3 @@ commit that fixes it.
 - Impact: extending coverage means copying a test rather than adding a row. The integration
   suites are scenario-shaped, and some may be clearer left as they are; which ones is a
   decision for whoever takes this up, recorded in `CONTRIBUTING.md` if any are kept.
-
-## The Docker build copies the host's workspace `node_modules` and build output
-
-- Where: `Dockerfile`, `COPY server ./server` and `COPY web ./web`; there is no `.dockerignore`
-- Found: 2026-09-30, while checking that the image still builds with `dev-kit`
-- Problem: the whole directory is copied, so `server/node_modules`, `web/node_modules`,
-  `server/dist` and `server/public` from the machine running `docker build` land on top of what
-  `npm ci` just installed in the build stage.
-- Impact: the build stage compiles with whatever the host has in those folders, and the build
-  context grows by their size. The runtime stage reinstalls its own dependencies and copies
-  only `dist` and `public`, so the shipped image is not affected beyond stale files a deleted
-  source may leave in `dist`.

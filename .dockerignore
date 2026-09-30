@@ -1,0 +1,30 @@
+# The build context is what git would commit. These mirror `.gitignore`, anchored with `**/`
+# because a `.dockerignore` pattern matches from the root, not at any depth. Without them the
+# host's installed dependencies and build output land on top of what `npm ci` just installed.
+
+.git/
+
+**/node_modules/
+**/dist/
+**/build/
+**/coverage/
+
+**/.env
+**/.env.*
+!.env.example
+
+.run/
+**/*.log
+
+**/test-results/
+**/playwright-report/
+
+**/.DS_Store
+.idea/
+.superpowers/
+
+# ── this project ─────────────────────────────────────────────────────────────
+
+tests/ui/.runtime.json
+server/public/
+.playwright-mcp/

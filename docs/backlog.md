@@ -62,17 +62,6 @@ commit that fixes it.
 - Impact: none seen yet. An installed app already has its manifest; the failure is console noise
   that hides errors that matter.
 
-## An oversized body is answered `bad_request`, not `payload_too_large`
-
-- Where: `server/src/shared/errors.ts`, `registerErrorHandler()`
-- Found: 2026-09-30, while adopting the shared HTTP rule
-- Problem: Fastify raises `FST_ERR_CTP_BODY_TOO_LARGE` with status 413 and no `validation`, so
-  it falls into the generic 4xx branch and is sent as `{ "error": "bad_request" }` with a 413.
-  The shared table gives 413 its own code. Send any `/api` route a body over Fastify's default
-  1 MiB limit to see it.
-- Impact: a client cannot tell "too big" from any other framework refusal by code alone. No
-  screen reads it today, so nothing the owner sees is wrong yet.
-
 ## Most tests keep their cases in the test body, not in a dataset
 
 - Where: `server/tests/integration/`, `web/tests/`, and some of `server/tests/unit/`

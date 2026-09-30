@@ -115,6 +115,11 @@ export function registerErrorHandler(app: FastifyInstance): void {
       })
       return
     }
+    // Ahead of the generic 4xx branch: the shared table gives an oversized body its own code.
+    if (error.statusCode === 413) {
+      void reply.status(413).send({ error: 'payload_too_large', message: error.message })
+      return
+    }
     if (typeof error.statusCode === 'number' && error.statusCode >= 400 && error.statusCode < 500) {
       void reply.status(error.statusCode).send({ error: 'bad_request', message: error.message })
       return

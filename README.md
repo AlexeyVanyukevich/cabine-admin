@@ -82,6 +82,19 @@ Both take `--bg`, and `./run stop` ends whichever was started that way. Neither 
 reboot, and neither starts the engine: that stays a separate `./run dev --bg` in
 `../booking-engine`, every time.
 
+### Offline mode works only in the built app, on a secure origin
+
+The offline shell comes from a service worker, and two things decide whether one runs:
+
+- **Only `./run start` has one.** The PWA plugin registers no worker under `./run dev`, so an
+  offline reload on the Vite port fails with `ERR_INTERNET_DISCONNECTED`. That is expected.
+- **A browser registers one only on HTTPS or `localhost`.** Under `./run start` it works on
+  `localhost` on this machine, but not at the network address `start` prints for a phone, which
+  is plain http. To try offline mode from a phone, reach the app over HTTPS: a deployment, or a
+  tunnel that terminates TLS in front of this machine.
+
+A failed offline reload in either of those two situations is the browser's rule, not a bug.
+
 ### Do not set `NODE_ENV=production` locally
 
 It makes the session cookie `Secure`, and a browser will not store a `Secure` cookie that

@@ -31,17 +31,6 @@ commit that fixes it.
   (`appearance: none`) and draws one at the text's inset, coloured from the theme's variables.
 - Impact: cosmetic, but it is the one dropdown in the app and reads as unfinished.
 
-## Offline mode needs the built app on a secure origin, and the README does not say so
-
-- Where: `README.md`, "Running it"
-- Found: 2026-09-30, while testing offline mode locally
-- Problem: `vite-plugin-pwa` registers no service worker under `./run dev`, so an offline reload
-  on the Vite port fails with `ERR_INTERNET_DISCONNECTED`. Under `./run start` it works on
-  `localhost`, but not on the network address `start` prints for a phone: a browser registers
-  service workers only on HTTPS or `localhost`.
-- Impact: whoever tests offline mode on the dev port, or from a phone on the local network,
-  sees it fail and takes it for a bug.
-
 ## Most tests keep their cases in the test body, not in a dataset
 
 - Where: `server/tests/integration/`, `web/tests/`, and some of `server/tests/unit/`

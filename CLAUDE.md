@@ -18,6 +18,8 @@ never a replacement for it.
 calendar and login. `README.md` covers running, configuring and deploying. How the two relate
 to specs and plans is the imported documentation rule below.
 
+`docs/backlog.md` lists what is known to be wrong and not yet fixed. Read it before planning.
+
 The engine lives at `../booking-engine` on this machine. To read it in a session:
 `/add-dir ../booking-engine`. Its own documentation is the contract, and these two are the
 ones to read:
@@ -64,6 +66,7 @@ why in `CONTRIBUTING.md`.
 @node_modules/dev-kit/rules/documentation.md
 @node_modules/dev-kit/rules/writing.md
 @node_modules/dev-kit/rules/review.md
+@node_modules/dev-kit/rules/backlog.md
 
 **`CONTRIBUTING.md` holds this repository's own conventions**: where the shared layout sits
 under `server/`, the error codes beyond the shared table, money and dates, the generated engine

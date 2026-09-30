@@ -1,15 +1,6 @@
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
 .timeline {
+  /* Fixed, because every row is a grid of its own (below): the date column can only line up down
+     the month if each row is given the same width rather than sizing it to its own date. */
   --date-col: 58px;
   --row-h: 40px;
   background: var(--surface);
@@ -31,9 +22,10 @@
   grid-template-columns: var(--date-col) repeat(var(--lanes), minmax(0, 1fr));
 }
 
+/* Under the frame's pinned box, whose height changes with the banner and the notice. */
 .timeline__head {
   position: sticky;
-  top: 0;
+  top: var(--chrome-h, 0px);
   z-index: 2;
   background: var(--surface-sunk);
   border-bottom: 1px solid var(--line-strong);
@@ -53,6 +45,10 @@
 .timeline__row {
   min-height: var(--row-h);
   border-bottom: 1px solid var(--line);
+  /* Scrolled to — today, on opening the month — within the band left between what is pinned
+     above and the bottom bar below, not under either. */
+  scroll-margin-top: calc(var(--chrome-h, 0px) + var(--head-h, 0px));
+  scroll-margin-bottom: var(--nav-h, 0px);
 }
 
 .timeline__row:last-child {

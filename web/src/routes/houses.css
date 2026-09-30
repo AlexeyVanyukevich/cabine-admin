@@ -38,7 +38,7 @@
 
 .addons__row {
   display: grid;
-  grid-template-columns: 1fr 96px var(--tap);
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
   gap: 8px;
   margin-bottom: 8px;
 }
@@ -48,6 +48,7 @@
 }
 
 .addons__remove {
+  min-width: var(--tap);
   border: 1px solid var(--line-strong);
   background: transparent;
   border-radius: var(--radius-sm);

@@ -251,8 +251,176 @@ test.describe('on a touch screen', () => {
     await goToMonth(page, month)
 
     await night(page, checkIn).tap()
+    // Clear of the bottom bar, whatever height that bar turns out to be.
+    const bar = (await page.getByRole('status').boundingBox())!
+    const nav = (await page.locator('.nav').boundingBox())!
+    expect(bar.y + bar.height).toBeLessThanOrEqual(nav.y)
     await page.getByRole('status').getByRole('button', { name: 'Отмена' }).tap()
     await expect(page.getByRole('status')).toBeHidden()
     await expect(night(page, checkIn)).not.toHaveClass(/timeline__cell--picked/)
+  })
+})
+
+interface Box {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+async function boxOf(page: Page, selector: string): Promise<Box> {
+  const box = await page.locator(selector).first().boundingBox()
+  if (box === null) throw new Error(`${selector} is not rendered`)
+  return box
+}
+
+const bottom = (box: Box) => box.y + box.height
+
+/** Each box ends where the next begins, or above it: stacked, never drawn over one another. */
+function expectStacked(boxes: Box[]): void {
+  for (let i = 1; i < boxes.length; i += 1) {
+    expect(bottom(boxes[i - 1]!)).toBeLessThanOrEqual(boxes[i]!.y + 0.5)
+  }
+}
+
+/** Paged to the fixture month and its grid drawn: until then the page is too short to scroll. */
+async function openMonth(page: Page): Promise<void> {
+  await goToMonth(page, MONTH)
+  await expect(
+    page.locator(`[data-testid="night-cell"][data-date="${MONTH}"]`).first(),
+  ).toBeVisible()
+}
+
+async function scrollToEnd(page: Page): Promise<void> {
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+}
+
+/** The rows lying wholly between the house names and the bottom bar. */
+async function rowsInView(page: Page): Promise<number> {
+  const head = await boxOf(page, '.timeline__head')
+  const nav = await boxOf(page, '.nav')
+  const rows = await page.locator('.timeline__row').evaluateAll((els) =>
+    els.map((el) => {
+      const box = el.getBoundingClientRect()
+      return { top: box.top, bottom: box.bottom }
+    }),
+  )
+  return rows.filter((row) => row.top >= bottom(head) - 0.5 && row.bottom <= nav.y + 0.5).length
+}
+
+/**
+ * The month and its arrows ride in the pinned title bar, so a long month scrolled to its end
+ * still says which month it is and can be paged without scrolling back up. The house names sit
+ * directly under that bar rather than sliding beneath it.
+ */
+test.describe('the pinned month', () => {
+  test.use({ hasTouch: true, isMobile: true })
+
+  test.describe('on a phone held upright', () => {
+    test.use({ viewport: { width: 390, height: 844 } })
+
+    test('the grid starts high enough to show most of the month', async ({ page }) => {
+      await signIn(page)
+      await openMonth(page)
+      await page.evaluate(() => window.scrollTo(0, 0))
+
+      const grid = await boxOf(page, '.timeline')
+      test.info().annotations.push({ type: 'grid top', description: `${grid.y}px` })
+      expect(grid.y).toBeLessThan(120)
+    })
+
+    test('the month stays in reach at the end of the month', async ({ page }) => {
+      await signIn(page)
+      await openMonth(page)
+      await scrollToEnd(page)
+
+      const title = page.locator('.monthbar__title')
+      const previous = page.getByRole('button', { name: 'Предыдущий месяц' })
+      const next = page.getByRole('button', { name: 'Следующий месяц' })
+      await expect(title).toBeInViewport()
+      await expect(previous).toBeInViewport()
+      await expect(next).toBeInViewport()
+
+      const chrome = await boxOf(page, '.app-chrome')
+      expect(chrome.y).toBeCloseTo(0, 0)
+      expectStacked([await boxOf(page, '.topbar'), await boxOf(page, '.timeline__head')])
+      // Directly under the bar, not somewhere further down the page.
+      expect((await boxOf(page, '.timeline__head')).y).toBeCloseTo(bottom(chrome), 0)
+      await expect(page.locator('.timeline__row').last()).toBeInViewport()
+
+      const shown = await title.textContent()
+      await next.tap()
+      await expect(title).not.toHaveText(shown!)
+      await expect(title).toBeInViewport()
+      await previous.tap()
+      await expect(title).toHaveText(shown!)
+    })
+
+    test('with the network gone, the banner and the stamp stack under the month', async ({
+      page,
+      context,
+    }) => {
+      await page.goto(appUrl('/login'))
+      // The worker has to control the page before the reload below, or the shell is not cached.
+      await page.waitForFunction(() => navigator.serviceWorker.controller !== null)
+      await page.getByLabel('Пароль').fill(PASSWORD)
+      await page.getByRole('button', { name: 'Войти' }).click()
+      await expect(page.locator('.timeline')).toBeVisible()
+      await page.waitForLoadState('networkidle')
+
+      await context.setOffline(true)
+      await page.reload()
+      await expect(page.getByText(/Календарь на память, обновлён/)).toBeVisible()
+      // `navigator.onLine` is not guaranteed to read false on the first script of a document
+      // loaded into an offline context, and the banner keys off it. The context is offline, so
+      // telling the page so is the truth, just delivered on time.
+      await page.evaluate(() => window.dispatchEvent(new Event('offline')))
+      await expect(page.getByText('Нет сети. Календарь показан на память.')).toBeVisible()
+
+      await scrollToEnd(page)
+      const chrome = await boxOf(page, '.app-chrome')
+      expect(chrome.y).toBeCloseTo(0, 0)
+      expectStacked([
+        await boxOf(page, '.topbar'),
+        await boxOf(page, '.conn'),
+        await boxOf(page, '.app-chrome__notice'),
+        await boxOf(page, '.timeline__head'),
+      ])
+      expect((await boxOf(page, '.timeline__head')).y).toBeCloseTo(bottom(chrome), 0)
+
+      const title = page.locator('.monthbar__title')
+      await expect(title).toBeInViewport()
+      const shown = await title.textContent()
+      await page.getByRole('button', { name: 'Следующий месяц' }).tap()
+      await expect(title).not.toHaveText(shown!)
+      await page.getByRole('button', { name: 'Предыдущий месяц' }).tap()
+      await expect(title).toHaveText(shown!)
+    })
+  })
+
+  test.describe('on a phone held sideways', () => {
+    test.use({ viewport: { width: 844, height: 390 } })
+
+    test('five nights show under the pinned header', async ({ page }) => {
+      await signIn(page)
+      await openMonth(page)
+      await page.evaluate(() => window.scrollTo(0, 300))
+
+      const rows = await rowsInView(page)
+      test.info().annotations.push({ type: 'rows in view', description: String(rows) })
+      expect(rows).toBeGreaterThanOrEqual(5)
+    })
+
+    // The calendar opens scrolled to today; the row must land in the band the owner can see,
+    // not under the bar pinned above the house names.
+    test('today opens clear of the pinned header', async ({ page }) => {
+      await signIn(page)
+      const today = page.locator('.timeline__row--today')
+      await expect(today).toBeVisible()
+
+      const row = (await today.boundingBox())!
+      expect(row.y).toBeGreaterThanOrEqual(bottom(await boxOf(page, '.timeline__head')) - 0.5)
+      expect(bottom(row)).toBeLessThanOrEqual((await boxOf(page, '.nav')).y + 0.5)
+    })
   })
 })

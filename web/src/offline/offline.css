@@ -1,36 +1,5 @@
-/*
- * `.conn` is pinned to the top of the viewport by this parent, not by a `position: sticky` of
- * its own. `Timeline` calls `scrollIntoView({block:'center'})` on mount
- * (web/src/calendar/Timeline.tsx), which on a mid-month day scrolls straight past this on load,
- * before the owner has had a chance to read it, unless it stays pinned. A second sticky element
- * for the calendar's staleness stamp sits right below this one, at the same offset — two
- * independent `position: sticky` elements both anchored to `top: 0` would land on the same spot
- * and overlap rather than stack, since neither knows the other's height (this one's own text
- * varies in length). Sharing this single sticky box sidesteps that arithmetic.
- *
- * `#root` (styles.css) deliberately has no height rule of its own, so this element's `top: 0`
- * sticks against the real, full content height rather than a box artificially capped at one
- * screen — see the note there for what that took to get right (a `display: flex` on `#root` was
- * tried and rejected specifically because it stopped this element from sticking at all).
- */
-.app-chrome {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: var(--paper);
-}
-
-.app-chrome__notice {
-  margin: 0;
-  padding: 6px 1rem;
-  font-size: 0.8rem;
-  color: var(--ink-faint);
-  text-align: center;
-  background: var(--surface-sunk);
-  border-bottom: 1px solid var(--line);
-}
-
-/* A strip the width of the screen, so it cannot be scrolled past — see `.app-chrome` above. */
+/* A strip the width of the screen, pinned by the frame's sticky box (`.app-chrome`, screen.css)
+   rather than by a `position: sticky` of its own. */
 .conn {
   display: block;
   width: 100%;

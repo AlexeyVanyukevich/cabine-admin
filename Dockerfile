@@ -9,13 +9,13 @@ FROM node:24.18-alpine AS build
 WORKDIR /app
 
 # Dependencies first, so a source-only change does not reinstall them. The workspace manifests
-# come along because npm needs them to resolve the tree.
+# come along because npm needs them to resolve the tree. The compiler settings arrive here too:
+# both workspaces' tsconfig extends dev-kit, a dev dependency fetched from its git host.
 COPY package.json package-lock.json ./
 COPY server/package.json ./server/
 COPY web/package.json ./web/
 RUN npm ci
 
-COPY tsconfig.base.json ./
 COPY server ./server
 COPY web ./web
 

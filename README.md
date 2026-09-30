@@ -176,6 +176,10 @@ its bookings for the whole run, so a test that needs free nights books its own w
 container serves the API and the app from one origin. It needs `DATABASE_URL`, `ENGINE_URL`
 and `ENGINE_API_KEY` in its environment, and a Postgres to talk to.
 
+The build stage needs GitHub as well as the npm registry: both workspaces' compiler settings
+come from `dev-kit`, a dev dependency installed from its git host at a pinned tag. The runtime
+image does not contain it.
+
 **It must be reached over HTTPS.** This is not a preference. The session cookie is set
 `Secure`, and browsers refuse to store a `Secure` cookie that arrives over plain HTTP — the
 owner would sign in, appear to succeed, and be signed out again on the very next tap, with

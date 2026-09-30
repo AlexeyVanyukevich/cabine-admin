@@ -76,8 +76,9 @@ Testcontainers. Client: React + Vite, React Router, TanStack Query. npm workspac
 and `web/`. In production Fastify serves the built SPA through `@fastify/static`; in
 development Vite proxies `/api`. One deployable, one origin, no CORS.
 
-The stack matches the engine's because its conventions are already written down and proven; a
-different one would mean re-deciding every settled question for no gain.
+The stack matches the engine's, and both follow the same shared conventions from the `dev-kit`
+package; a different stack would mean re-deciding every settled question for no gain. Both
+workspaces' `tsconfig.json` extend the kit's bases, and Prettier takes the kit's configuration.
 
 ---
 

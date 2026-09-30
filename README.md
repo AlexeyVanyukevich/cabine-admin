@@ -14,7 +14,7 @@ The engine owns availability and bookings; this project owns people and money.
 | Document                                     | What it holds                                                            |
 | -------------------------------------------- | ------------------------------------------------------------------------ |
 | [docs/architecture.md](docs/architecture.md) | The system: the engine client, the data model, bookings, calendar, login |
-| [CONTRIBUTING.md](CONTRIBUTING.md)           | How we write code here: conventions, commits, and what a slice must do   |
+| [CONTRIBUTING.md](CONTRIBUTING.md)           | How we write code here: the shared rules it points at, and our own       |
 | This file                                    | Running it, configuring it, deploying it                                 |
 
 Read the third only if you are running it, and the second only if you are changing it.

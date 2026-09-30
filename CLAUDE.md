@@ -14,15 +14,9 @@ never a replacement for it.
 
 ## The documentation
 
-`docs/architecture.md` is **authoritative for what this project does today** — the engine
-client, the data model, the life of a booking, the calendar, login. Read it before changing
-behaviour. `README.md` covers running, configuring and deploying.
-
-Where either disagrees with a spec in `docs/superpowers/specs/` or an archived plan in
-`docs/superpowers/plans/archive/`, **the living document is right and the older one is stale.**
-Fix `docs/architecture.md`; do not send the reader to the spec. Specs are decision records:
-consult one for _why_ a shape was chosen, never for what the code does now. Archived plans are
-spent scaffolding and sit outside the reading path.
+`docs/architecture.md` covers the engine client, the data model, the life of a booking, the
+calendar and login. `README.md` covers running, configuring and deploying. How the two relate
+to specs and plans is the imported documentation rule below.
 
 The engine lives at `../booking-engine` on this machine. To read it in a session:
 `/add-dir ../booking-engine`. Its own documentation is the contract, and these two are the
@@ -56,23 +50,22 @@ a booking at creation, never referenced live, so raising a rate cannot rewrite p
 is the currency, for the same reason: changing the setting decides what the next price means and
 never reinterprets one already agreed. Nothing in this project converts between currencies.
 
-## The engine contract is generated, not written
-
-`server/src/engine/schema.d.ts` comes from the engine's OpenAPI document at `/docs/json`,
-which the engine itself generates from the same TypeBox schemas its routes validate against.
-Regenerate with `npm run engine:types`. Never hand-edit it, and never hand-write a parallel
-copy of the engine's types — a second copy of a contract drifts silently.
-
 ## Conventions
 
-**`CONTRIBUTING.md` is where the conventions live** — TypeScript settings, module resolution,
-the stack, the HTTP rules, layout and testing. Read it before writing code, and correct it
-there when a rule changes rather than restating the rule here.
+The shared ones come from the `dev-kit` package, one import per rule. A shared rule is corrected
+in the kit, never restated or overridden here; declining one means deleting its line and saying
+why in `CONTRIBUTING.md`.
 
-The ones that bite most often, repeated because they shape almost every edit:
+@node_modules/dev-kit/rules/typescript.md
+@node_modules/dev-kit/rules/http.md
+@node_modules/dev-kit/rules/layout.md
+@node_modules/dev-kit/rules/testing.md
+@node_modules/dev-kit/rules/commits.md
+@node_modules/dev-kit/rules/documentation.md
+@node_modules/dev-kit/rules/writing.md
+@node_modules/dev-kit/rules/review.md
 
-- Server modules are `NodeNext`: relative imports carry `.js` even in a `.ts` file. The web
-  workspace does not.
-- Errors keep the shape `{ error, message, details? }`, and every request body is TypeBox with
-  `additionalProperties: false` — unknown fields are rejected, never ignored.
-- The TypeBox package is `typebox`, not `@sinclair/typebox`.
+**`CONTRIBUTING.md` holds this repository's own conventions**: where the shared layout sits
+under `server/`, the error codes beyond the shared table, money and dates, the generated engine
+contract, phone-first styles and flexible sizes, and the commit scopes. Read it before writing
+code, and correct a local rule there rather than restating it here.

@@ -7,7 +7,8 @@ later work. Closing such a gap means correcting this document, not consulting th
 
 This document covers what the system does. Two others complete the onboarding path, and nothing
 else has to be read: [../README.md](../README.md) for running, configuring and deploying it, and
-[../CONTRIBUTING.md](../CONTRIBUTING.md) for the conventions code here is written to.
+[../CONTRIBUTING.md](../CONTRIBUTING.md) for the conventions code here is written to — this
+repository's own, and a pointer to the shared rules it takes from the `dev-kit` package.
 
 The specs in [superpowers/specs/](superpowers/specs/) are **decision records**. Read one to
 learn _why_ something has the shape it does, never to learn what it does. The executed plans

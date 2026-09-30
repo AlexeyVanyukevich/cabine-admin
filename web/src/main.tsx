@@ -2,6 +2,9 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { App } from './App'
+// Bundled rather than linked from a font host, so the worker precaches it at install and the
+// offline shell has its typeface from the first visit. Every subset: prices need latin-ext.
+import '@fontsource-variable/golos-text'
 import './styles.css'
 
 const client = new QueryClient({

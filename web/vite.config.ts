@@ -27,17 +27,6 @@ export default defineConfig({
             urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
             handler: 'NetworkOnly',
           },
-          {
-            // The interface's typeface, so the offline shell is not a system-font fallback.
-            urlPattern: ({ url }) =>
-              url.origin.endsWith('googleapis.com') || url.origin.endsWith('gstatic.com'),
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'fonts',
-              expiration: { maxEntries: 32, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
         ],
       },
     }),

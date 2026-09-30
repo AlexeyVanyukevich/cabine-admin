@@ -42,17 +42,6 @@ commit that fixes it.
 - Impact: whoever tests offline mode on the dev port, or from a phone on the local network,
   sees it fail and takes it for a bug.
 
-## The typeface is not cached offline after the first visit
-
-- Where: `web/vite.config.ts`, the `fonts` runtime cache
-- Found: 2026-09-30, while testing offline mode locally
-- Problem: the Google Fonts stylesheet is cached only when the service worker handles the
-  request, and on the first visit the worker is not yet in control. Open the built app once in a
-  fresh profile, go offline and reload: the stylesheet request fails with `net::ERR_FAILED` and
-  the screen falls back to a system font. A second online visit caches it.
-- Impact: a phone that goes offline right after its first visit shows the wrong typeface. Only
-  the look is affected.
-
 ## Most tests keep their cases in the test body, not in a dataset
 
 - Where: `server/tests/integration/`, `web/tests/`, and some of `server/tests/unit/`

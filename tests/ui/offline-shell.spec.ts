@@ -37,6 +37,30 @@ test('the worker precaches the web app manifest', async ({ page }) => {
   expect(cached).toBe(true)
 })
 
+test('the typeface renders offline from the first visit', async ({ page, context }) => {
+  await page.goto(appUrl('/'))
+  await page.waitForFunction(() => navigator.serviceWorker.controller !== null)
+
+  const failed: string[] = []
+  page.on('requestfailed', (request) => failed.push(request.url()))
+
+  await context.setOffline(true)
+  await page.reload()
+  await expect(page.getByLabel('Пароль')).toBeVisible()
+
+  // Faces are listed, not asked about with `document.fonts.check()`, which also answers true
+  // when no face of that family exists at all.
+  const loaded = await page.evaluate(async () => {
+    await document.fonts.ready
+    return [...document.fonts].some(
+      (face) =>
+        face.family.replace(/["']/g, '').startsWith('Golos Text') && face.status === 'loaded',
+    )
+  })
+  expect(loaded).toBe(true)
+  expect(failed).toEqual([])
+})
+
 test('an API call is never served from the cache', async ({ page, context }) => {
   await seedHouse()
   await page.goto(appUrl('/'))

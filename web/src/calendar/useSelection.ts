@@ -17,8 +17,8 @@ export type SelectionState =
   | { kind: 'idle' }
   /**
    * A pointer is down on a night. `completes` says whether releasing it finishes the stay —
-   * true once it has dragged off its first night, or when it is the second tap — and `resume`
-   * is what a press that turns into a scroll falls back to.
+   * true for a mouse, once a press has dragged off its first night, and for the second tap —
+   * and `resume` is what a press that turns into a scroll falls back to.
    */
   | (Range & { kind: 'pressing'; anchor: string; completes: boolean; resume?: Anchored })
   | Anchored
@@ -26,7 +26,8 @@ export type SelectionState =
   | (Range & { kind: 'chosen' })
 
 export type SelectionAction =
-  | { type: 'down'; date: string; houseId: string; free: string[] }
+  /** `pointerType` is the press's own, as the browser names it. */
+  | { type: 'down'; date: string; houseId: string; free: string[]; pointerType: string }
   | { type: 'over'; date: string; houseId: string; free: string[] }
   | { type: 'up' }
   /** The browser took the press over for a scroll: it was never a tap. */
@@ -59,9 +60,10 @@ function span(a: string, b: string): { checkIn: string; checkOut: string } {
  * A selection is a half-open range of nights: picking the 20th and the 21st means arriving on
  * the 20th and leaving on the 22nd, which is why the next guest can arrive that morning.
  *
- * Two gestures reach the same range. A mouse drags from the first night to the last. A finger
- * cannot — the browser keeps a touch on the night it began on, and moving it scrolls — so it taps
- * the first night, then the last. Tapping the same night twice is a one-night stay.
+ * Two gestures reach the same range. A mouse drags from the first night to the last, and a click
+ * that never leaves its night is that night alone. A finger cannot drag — the browser keeps a touch
+ * on the night it began on, and moving it scrolls — so it taps the first night, then the last.
+ * Tapping the same night twice is a one-night stay.
  */
 export function selectionReducer(state: SelectionState, action: SelectionAction): SelectionState {
   switch (action.type) {
@@ -91,7 +93,7 @@ export function selectionReducer(state: SelectionState, action: SelectionAction)
         houseId: action.houseId,
         anchor: action.date,
         ...span(action.date, action.date),
-        completes: false,
+        completes: action.pointerType === 'mouse',
         ...(resume === undefined ? {} : { resume }),
       }
     }

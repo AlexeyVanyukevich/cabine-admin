@@ -10,12 +10,20 @@ const free = ['2026-09-20', '2026-09-21', '2026-09-22', '2026-09-23']
 const HOUSE = 'house-a'
 const OTHER = 'house-b'
 
-const down = (date: string, houseId = HOUSE, nights = free): SelectionAction => ({
+const down = (
+  date: string,
+  houseId = HOUSE,
+  nights = free,
+  pointerType = 'touch',
+): SelectionAction => ({
   type: 'down',
   date,
   houseId,
   free: nights,
+  pointerType,
 })
+const press = (date: string, houseId = HOUSE, nights = free): SelectionAction =>
+  down(date, houseId, nights, 'mouse')
 const over = (date: string, houseId = HOUSE, nights = free): SelectionAction => ({
   type: 'over',
   date,
@@ -28,10 +36,10 @@ function run(...actions: SelectionAction[]): SelectionState {
   return actions.reduce(selectionReducer, idle)
 }
 
-describe('selectionReducer — a drag', () => {
+describe('selectionReducer — a mouse', () => {
   it('turns a drag into a half-open range', () => {
     // Two nights selected means a departure on the 22nd.
-    expect(run(down('2026-09-20'), over('2026-09-21'), up)).toMatchObject({
+    expect(run(press('2026-09-20'), over('2026-09-21'), up)).toMatchObject({
       kind: 'chosen',
       checkIn: '2026-09-20',
       checkOut: '2026-09-22',
@@ -39,7 +47,7 @@ describe('selectionReducer — a drag', () => {
   })
 
   it('works when dragged backwards', () => {
-    expect(run(down('2026-09-23'), over('2026-09-21'), up)).toMatchObject({
+    expect(run(press('2026-09-23'), over('2026-09-21'), up)).toMatchObject({
       kind: 'chosen',
       checkIn: '2026-09-21',
       checkOut: '2026-09-24',
@@ -51,16 +59,35 @@ describe('selectionReducer — a drag', () => {
   it('stops at an occupied night instead of jumping over it', () => {
     const nights = ['2026-09-20', '2026-09-21']
     expect(
-      run(down('2026-09-20', HOUSE, nights), over('2026-09-23', HOUSE, nights), up),
+      run(press('2026-09-20', HOUSE, nights), over('2026-09-23', HOUSE, nights), up),
     ).toMatchObject({ checkIn: '2026-09-20', checkOut: '2026-09-22' })
   })
 
   it('ignores another house passing under the pointer', () => {
-    expect(run(down('2026-09-20'), over('2026-09-22', OTHER), up)).toMatchObject({
-      kind: 'anchored',
+    expect(run(press('2026-09-20'), over('2026-09-22', OTHER), up)).toMatchObject({
+      kind: 'chosen',
       houseId: HOUSE,
       checkIn: '2026-09-20',
       checkOut: '2026-09-21',
+    })
+  })
+
+  // Nothing about a mouse stops it dragging, so a click that never left its night was meant as
+  // that night alone. Holding it for a second click would cost the owner a click on every stay.
+  it('books one night when a night is clicked without dragging', () => {
+    expect(run(press('2026-09-20'), up)).toEqual({
+      kind: 'chosen',
+      houseId: HOUSE,
+      checkIn: '2026-09-20',
+      checkOut: '2026-09-21',
+    })
+  })
+
+  it('closes a range a tap began when the last night is clicked', () => {
+    expect(run(down('2026-09-20'), up, press('2026-09-22'), up)).toMatchObject({
+      kind: 'chosen',
+      checkIn: '2026-09-20',
+      checkOut: '2026-09-23',
     })
   })
 })

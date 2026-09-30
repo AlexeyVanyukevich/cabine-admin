@@ -130,34 +130,68 @@ export function Calendar({ sync, onOpenTray, rebooking, onRebookHandled }: Props
       ? undefined
       : houses.data?.find((house) => house.id === selection.houseId)
 
+  // The first night stays held until the press on the next one is released: until then it is
+  // still the first night, and a press that turns into a scroll falls back to it.
+  const held =
+    selection.kind === 'anchored'
+      ? selection
+      : selection.kind === 'pressing'
+        ? selection.resume
+        : undefined
+  const heldHouse =
+    held === undefined ? undefined : houses.data?.find((house) => house.id === held.houseId)
+
   // In the pinned bar, so the month on screen is named, and can be changed, however far down
-  // the grid the owner has scrolled.
-  const monthbar = (
-    <div className="monthbar">
-      <button
-        className="monthbar__step"
-        type="button"
-        aria-label="Предыдущий месяц"
-        onClick={() => setMonth(shiftMonth(month, -1))}
-      >
-        ←
-      </button>
-      <p className="monthbar__title">{monthName(month)}</p>
-      <button
-        className="monthbar__step"
-        type="button"
-        aria-label="Следующий месяц"
-        onClick={() => setMonth(shiftMonth(month, 1))}
-      >
-        →
-      </button>
+  // the grid the owner has scrolled. A held first night takes the month's place there rather than
+  // pinning a bar over the grid, where it would cover the nights just after it — the likeliest
+  // last ones. The two share one cell, so the bar keeps its height either way and the grid under
+  // it never moves.
+  const bar = (
+    <div className="calbar">
+      <div className={held === undefined ? 'monthbar' : 'monthbar monthbar--covered'}>
+        <button
+          className="monthbar__step"
+          type="button"
+          aria-label="Предыдущий месяц"
+          onClick={() => setMonth(shiftMonth(month, -1))}
+        >
+          ←
+        </button>
+        <p className="monthbar__title">{monthName(month)}</p>
+        <button
+          className="monthbar__step"
+          type="button"
+          aria-label="Следующий месяц"
+          onClick={() => setMonth(shiftMonth(month, 1))}
+        >
+          →
+        </button>
+      </div>
+      {held !== undefined && (
+        <div className="pickbar" role="status">
+          <p className="pickbar__text">
+            <strong>
+              С {formatNight(held.checkIn)}
+              {heldHouse === undefined ? '' : ` · ${heldHouse.name}`}
+            </strong>
+            <span>Нажмите на последнюю ночь</span>
+          </p>
+          <button
+            className="pickbar__cancel"
+            type="button"
+            onClick={() => dispatch({ type: 'cancel' })}
+          >
+            Отмена
+          </button>
+        </div>
+      )}
     </div>
   )
 
   return (
     <Screen
       title="Календарь"
-      bar={monthbar}
+      bar={bar}
       notice={
         calendar.stale && calendar.fetchedAt !== undefined
           ? `Календарь на память, обновлён ${stampMoment(calendar.fetchedAt)}`
@@ -188,7 +222,14 @@ export function Calendar({ sync, onOpenTray, rebooking, onRebookHandled }: Props
 
         {overlay && overlay.houses.length > 0 && (
           <>
-            <p className="hint">Нажмите на первую ночь брони, затем на последнюю.</p>
+            {/* Whichever gesture the device makes: a finger cannot drag, and a mouse need not
+                click twice. */}
+            <p className="hint hint--touch">
+              Нажмите на первую ночь брони, затем на последнюю. На одну ночь — дважды на неё.
+            </p>
+            <p className="hint hint--mouse">
+              Нажмите на ночь, чтобы забронировать её, или протяните мышью по нескольким.
+            </p>
             <Timeline
               from={from}
               to={to}
@@ -196,33 +237,14 @@ export function Calendar({ sync, onOpenTray, rebooking, onRebookHandled }: Props
               bookings={overlay.bookings}
               selection={selection}
               onOpenBooking={openBooking}
-              onNightDown={(houseId, date, free) => dispatch({ type: 'down', date, houseId, free })}
+              onNightDown={(houseId, date, free, pointerType) =>
+                dispatch({ type: 'down', date, houseId, free, pointerType })
+              }
               onNightOver={(houseId, date, free) => dispatch({ type: 'over', date, houseId, free })}
             />
           </>
         )}
       </div>
-
-      {/* Pinned above the bottom bar, because between the two taps the owner scrolls to find
-          the last night and the first one leaves the screen. */}
-      {selection.kind === 'anchored' && (
-        <div className="pickbar" role="status">
-          <p className="pickbar__text">
-            <strong>
-              С {formatNight(selection.checkIn)}
-              {pickedHouse === undefined ? '' : ` · ${pickedHouse.name}`}
-            </strong>
-            <span>Нажмите на последнюю ночь или ещё раз на эту</span>
-          </p>
-          <button
-            className="pickbar__cancel"
-            type="button"
-            onClick={() => dispatch({ type: 'cancel' })}
-          >
-            Отмена
-          </button>
-        </div>
-      )}
 
       {/* Only once the last night is picked. Opening it on the first press would put the sheet
           over the grid before the owner had finished choosing how many nights. */}

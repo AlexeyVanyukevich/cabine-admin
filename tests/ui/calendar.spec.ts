@@ -57,9 +57,8 @@ async function pickNights(page: Page, checkIn: string, lastNight: string): Promi
   await page.mouse.up()
 }
 
-/** A one-night stay: its night is both the first and the last one picked. */
+/** A one-night stay: a mouse click that never leaves its night. */
 async function pickOneNight(page: Page, date: string): Promise<void> {
-  await night(page, date).click()
   await night(page, date).click()
 }
 
@@ -130,6 +129,22 @@ test('an occupied night cannot start a booking', async ({ page }) => {
   // Tapping a taken night opens the stay that owns it, never a new-booking form.
   await expect(page.getByRole('dialog', { name: 'Новая бронь' })).toBeHidden()
   await expect(page.getByRole('dialog', { name: 'Иван' })).toBeVisible()
+})
+
+// No second click: one is all a mouse needs for a single night, and a drag covers several.
+test('a click on a night books that night alone', async ({ page }) => {
+  const month = MONTH.slice(0, 7)
+  const lastNight = addDays(monthStart(2), -1)
+  await signIn(page)
+  await goToMonth(page, month)
+
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+  await night(page, lastNight).click()
+
+  const sheet = page.getByRole('dialog', { name: 'Новая бронь' })
+  await expect(sheet).toBeVisible()
+  await expect(sheet).toContainText('1 ночь')
+  await expect(page.getByRole('status')).toBeHidden()
 })
 
 test('records a payment against a booking', async ({ page }) => {
@@ -224,9 +239,7 @@ test.describe('on a touch screen', () => {
     await expect(page.getByTestId('booking-bar').filter({ hasText: 'Вера' })).toBeVisible()
   })
 
-  // The bar that holds the first night appears at the bottom of the screen, which may be right
-  // under the finger that tapped it — and the click trailing that tap must not press its
-  // cancel button.
+  // Whatever the first tap brings up, the click trailing that tap must not land on it.
   test('a night tapped just above the bottom bar stays picked', async ({ page }) => {
     const { checkIn, month } = stay(15, 1)
     await seedHouse('Второй дом', 'B')
@@ -245,18 +258,54 @@ test.describe('on a touch screen', () => {
     await expect(page.getByRole('status')).toContainText('последнюю ночь')
   })
 
+  // The nights after the first are the likeliest last ones, and they sit right below it, so
+  // nothing that holds the first night may cover them.
+  test('the nights after the first one stay in view', async ({ page }) => {
+    const { checkIn, month } = stay(6, 1)
+    const next = addDays(checkIn, 1)
+    await signIn(page)
+    await goToMonth(page, month)
+
+    // Low on the screen, where a thumb taps: the next night is the last row above the bottom bar.
+    await night(page, checkIn).evaluate((el) => {
+      const box = el.getBoundingClientRect()
+      const nav = document.querySelector('.nav')!.getBoundingClientRect()
+      window.scrollBy(0, box.bottom + box.height - nav.top)
+    })
+    await night(page, checkIn).tap()
+    await expect(page.getByRole('status')).toContainText('последнюю ночь')
+
+    const box = (await night(page, next).boundingBox())!
+    const hit = await page.evaluate(
+      ([x, y]) =>
+        document
+          .elementFromPoint(x!, y!)
+          ?.closest('[data-testid="night-cell"]')
+          ?.getAttribute('data-date'),
+      [box.x + box.width / 2, box.y + box.height / 2],
+    )
+    expect(hit).toBe(next)
+    await night(page, next).tap()
+    await expect(page.getByRole('dialog', { name: 'Новая бронь' })).toContainText('2 ночи')
+  })
+
+  // It takes the month's place in the pinned bar, so the grid under it does not move.
   test('the first night can be let go of', async ({ page }) => {
     const { checkIn, month } = stay(21, 1)
     await signIn(page)
     await goToMonth(page, month)
+    const nextMonth = page.getByRole('button', { name: 'Следующий месяц' })
+    await night(page, checkIn).scrollIntoViewIfNeeded()
+    const grid = await night(page, checkIn).boundingBox()
 
     await night(page, checkIn).tap()
-    // Clear of the bottom bar, whatever height that bar turns out to be.
-    const bar = (await page.getByRole('status').boundingBox())!
-    const nav = (await page.locator('.nav').boundingBox())!
-    expect(bar.y + bar.height).toBeLessThanOrEqual(nav.y)
+    await expect(page.locator('.app-chrome').getByRole('status')).toContainText('последнюю ночь')
+    await expect(nextMonth).toBeHidden()
+    expect(await night(page, checkIn).boundingBox()).toEqual(grid)
+
     await page.getByRole('status').getByRole('button', { name: 'Отмена' }).tap()
     await expect(page.getByRole('status')).toBeHidden()
+    await expect(nextMonth).toBeVisible()
     await expect(night(page, checkIn)).not.toHaveClass(/timeline__cell--picked/)
   })
 })

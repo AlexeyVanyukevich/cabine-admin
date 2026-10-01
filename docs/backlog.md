@@ -18,19 +18,6 @@ commit that fixes it.
 - Impact: the owner cannot tell at a glance which bookings the engine has not yet accepted,
   which is the one thing the treatment exists to show.
 
-## The currency dropdown's arrow sits almost against its right border
-
-- Where: `web/src/ui/sheet.css`, `.field__input`; the only `select` is in
-  `web/src/routes/Houses.tsx`
-- Found: 2026-09-30, reported by the owner
-- Problem: the `select` keeps the browser's own arrow (`appearance: auto`) with `padding: 0 12px`.
-  The text starts 12px in from the left border, but Chrome draws the arrow about 5px from the
-  right one, so the two sides do not match. Open Дома and look at Валюта. The owner's report
-  was in the dark theme on a wide screen, where the field stretches and the small arrow sits
-  alone at the far edge. Padding cannot move the browser's arrow: a fix hides it
-  (`appearance: none`) and draws one at the text's inset, coloured from the theme's variables.
-- Impact: cosmetic, but it is the one dropdown in the app and reads as unfinished.
-
 ## Most tests keep their cases in the test body, not in a dataset
 
 - Where: `server/tests/integration/`, `web/tests/`, and some of `server/tests/unit/`

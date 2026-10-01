@@ -112,6 +112,27 @@ textarea.field__input {
   resize: vertical;
 }
 
+/* The browser's own arrow cannot be moved by padding, so it is hidden and one is drawn at the
+   same inset from the right border as the text keeps from the left. Two half-filled squares make
+   a caret: the drawing is the only fixed size here, and the right padding makes room for it. */
+select.field__input {
+  --field-arrow: var(--ink-soft);
+  appearance: none;
+  padding-right: 34px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--field-arrow) 50%),
+    linear-gradient(135deg, var(--field-arrow) 50%, transparent 50%);
+  background-position:
+    right 17px center,
+    right 12px center;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+
+select.field__input:disabled {
+  --field-arrow: var(--ink-faint);
+}
+
 .field__row {
   display: flex;
   gap: 12px;

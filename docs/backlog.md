@@ -4,37 +4,6 @@ What is known to be wrong and not yet fixed, newest first. The rule for this fil
 `backlog.md`, imported by [CLAUDE.md](../CLAUDE.md): one entry per finding, deleted by the
 commit that fixes it.
 
-## The booking engine answers a used-up rate limit with `500`, not `429 rate_limited`
-
-- Where: the booking engine, not this repository; seen through `server/src/engine/client.ts`
-- Found: 2026-10-01, while running the browser journeys in Chromium and WebKit in one run
-- Problem: once the per-key limit for the minute is used up, the engine logs
-  `{"error":"rate_limited","message":"Too many requests; slow down and retry"}` as an
-  "unhandled error" and answers `500 Internal server error`. Its own conventions table gives
-  that case `429 rate_limited`, which this project's engine facade retries with backoff; a
-  `500` it passes on as `engine_rejected_our_key`. Run `./run test:ui` with both browser projects:
-  2 to 9 such answers per run, on calendar reads, and in 2 runs of 3 the WebKit journey "a cold
-  reload with the server out of reach…" fails because the month it needs was never cached.
-- Impact: a burst past the limit — two tabs, or a quick run of taps — shows the owner an error
-  where a retry would have succeeded, and the browser journeys fail intermittently. The fix
-  belongs in the engine; this entry stays until a version that answers `429` is in use here.
-
-## The booking engine offers no supported way to run it in a consumer's integration tests
-
-- Where: `server/tests/integration/engine-harness.ts`; the gap is in the booking engine
-- Found: 2026-10-01, when the engine's rate limit started failing the browser journeys
-- Problem: to test against the real engine, the harness builds its image from a sibling
-  checkout (it publishes none), starts its database and its console as separate containers,
-  issues keys by running a script inside the console container, and seeds houses with a wider
-  key than the app uses. Test traffic then runs under production's per-key rate limit, with no
-  setting to lift it; the app's own login limit, by contrast, is raised for the journeys through
-  `LOGIN_ATTEMPTS_PER_MINUTE`. Every consumer has to rebuild all of this, and the tricks break
-  when the engine changes shape.
-- Impact: a suite that grows, or runs in a second browser, trips the limit and fails for reasons
-  that have nothing to do with the code under test. Wanted from the engine: a published image
-  and a documented way to bring it up for tests — keys issued without exec, the rate limit
-  configurable — so this harness shrinks to starting it.
-
 ## "Отправляем…" stays up while nothing is being sent
 
 - Where: `web/src/offline/ConnectionBanner.tsx`, the `waiting > 0` branch; `useSync` in
@@ -69,6 +38,10 @@ commit that fixes it.
   `select`, touch selection on the calendar.
 - Impact: a defect only in Safari reaches the owner with a green suite behind it. Nothing has
   been seen to fail there; nothing has been checked there.
+- Blocked: a WebKit project on an iPhone profile is written and passes, but fails intermittently
+  while the booking engine answers a used-up rate limit with `500` instead of `429`. That defect,
+  and the engine's missing support for consumers' integration tests, are in the engine's own
+  `docs/backlog.md`. The commit adding the project waits on branch `test/webkit-journeys`.
 
 ## Browser journeys pick their month in UTC while the calendar opens on the local one
 

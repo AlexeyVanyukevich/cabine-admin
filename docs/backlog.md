@@ -4,6 +4,18 @@ What is known to be wrong and not yet fixed, newest first. The rule for this fil
 `backlog.md`, imported by [CLAUDE.md](../CLAUDE.md): one entry per finding, deleted by the
 commit that fixes it.
 
+## Browser journeys run only in Chromium, though the owner's phone may run Safari
+
+- Where: `playwright.config.ts`, `projects` (one, `Desktop Chrome` at phone width)
+- Found: 2026-10-01, while reviewing the offline and dropdown fixes
+- Problem: every journey, and every check made while fixing the backlog, ran in Chromium alone,
+  with only Chromium installed for Playwright. Every browser on iOS uses WebKit, so an iPhone
+  never runs what the suite checks. Behaviour that differs between engines is unverified: the
+  service worker and offline reload, `document.fonts`, `appearance: none` on the currency
+  `select`, touch selection on the calendar.
+- Impact: a defect only in Safari reaches the owner with a green suite behind it. Nothing has
+  been seen to fail there; nothing has been checked there.
+
 ## Browser journeys pick their month in UTC while the calendar opens on the local one
 
 - Where: `tests/ui/helpers.ts`, `monthStart()`; used by `houses-guests.spec.ts`,

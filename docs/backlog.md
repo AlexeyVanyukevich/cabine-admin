@@ -4,6 +4,20 @@ What is known to be wrong and not yet fixed, newest first. The rule for this fil
 `backlog.md`, imported by [CLAUDE.md](../CLAUDE.md): one entry per finding, deleted by the
 commit that fixes it.
 
+## Browser journeys pick their month in UTC while the calendar opens on the local one
+
+- Where: `tests/ui/helpers.ts`, `monthStart()`; used by `houses-guests.spec.ts`,
+  `calendar.spec.ts` and `offline-booking.spec.ts`
+- Found: 2026-10-01, while running the journeys for the dropdown fix
+- Problem: `monthStart` counts months from the UTC date, but the calendar opens on the local
+  month (`web/src/calendar/nights.ts`, `today()`), and a journey reaches its month by pressing
+  "Следующий месяц" from there. When the two dates fall in different months, the journey lands
+  one month past the night it looks for. Seen at 00:18 on 1 October in UTC+3, still 30 September
+  in UTC: `Дома › adds an extra, and it becomes bookable on the calendar` waits for a night cell
+  dated 2026-12-04 while January 2027 is on screen, and times out. The same failure on `main`.
+- Impact: in UTC+3 the journeys fail for the first three hours of every month, and pass again
+  without any change. Whoever runs them then takes the change under test for the cause.
+
 ## A booking waiting to be sent looks the same as a confirmed one
 
 - Where: `web/src/calendar/timeline.css`, `.timeline__cell--queued`

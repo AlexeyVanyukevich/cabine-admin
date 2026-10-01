@@ -40,7 +40,7 @@ export function Screen({ title, bar, notice, children }: Props) {
         </header>
         {banner}
         {notice !== undefined && (
-          <p className="app-chrome__notice" role="status">
+          <p className="app-chrome__notice" role="status" data-testid="screen-notice">
             {notice}
           </p>
         )}

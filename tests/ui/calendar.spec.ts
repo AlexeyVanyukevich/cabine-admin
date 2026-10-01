@@ -1,5 +1,13 @@
 import { expect, test, type Page } from '@playwright/test'
-import { appUrl, monthStart, resetAppDb, seedHouse, setOwnerPassword } from './helpers.js'
+import {
+  appUrl,
+  cutServer,
+  monthStart,
+  resetAppDb,
+  restoreServer,
+  seedHouse,
+  setOwnerPassword,
+} from './helpers.js'
 
 const PASSWORD = 'correct horse battery staple'
 const HOUSE = 'Дом у озера'
@@ -22,6 +30,7 @@ test.beforeEach(async () => {
   await setOwnerPassword(PASSWORD)
   await seedHouse(HOUSE)
 })
+test.afterEach(restoreServer)
 
 async function signIn(page: Page): Promise<void> {
   await page.goto(appUrl('/login'))
@@ -411,14 +420,16 @@ test.describe('the pinned month', () => {
       await expect(page.locator('.timeline')).toBeVisible()
       await page.waitForLoadState('networkidle')
 
-      await context.setOffline(true)
+      // The reload is made with the server out of reach rather than with the browser offline:
+      // WebKit's offline emulation fails a navigation before the service worker can answer it.
+      await cutServer()
       await page.reload()
-      await expect(page.getByText(/Календарь на память, обновлён/)).toBeVisible()
-      // `navigator.onLine` is not guaranteed to read false on the first script of a document
-      // loaded into an offline context, and the banner keys off it. The context is offline, so
-      // telling the page so is the truth, just delivered on time.
-      await page.evaluate(() => window.dispatchEvent(new Event('offline')))
-      await expect(page.getByText('Нет сети. Календарь показан на память.')).toBeVisible()
+      await expect(page.getByTestId('screen-notice')).toBeVisible()
+      // Then the phone reports the lost signal, which is what puts the banner up.
+      await context.setOffline(true)
+      await expect(
+        page.getByTestId('connection-banner').and(page.locator('[data-state="offline"]')),
+      ).toBeVisible()
 
       await scrollToEnd(page)
       const chrome = await boxOf(page, '.app-chrome')

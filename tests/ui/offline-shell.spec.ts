@@ -1,5 +1,12 @@
 import { expect, test } from '@playwright/test'
-import { appUrl, resetAppDb, seedHouse, setOwnerPassword } from './helpers.js'
+import {
+  appUrl,
+  cutServer,
+  resetAppDb,
+  restoreServer,
+  seedHouse,
+  setOwnerPassword,
+} from './helpers.js'
 
 const PASSWORD = 'correct horse battery staple'
 
@@ -7,15 +14,16 @@ test.beforeEach(async () => {
   await resetAppDb()
   await setOwnerPassword(PASSWORD)
 })
+test.afterEach(restoreServer)
 
-test('the app shell still renders with the network cut', async ({ page, context }) => {
+test('the app shell still renders with the server out of reach', async ({ page }) => {
   await page.goto(appUrl('/'))
 
   // The shell is only precached once the worker has activated; without this the reload below
   // races registration and fails intermittently rather than meaningfully.
   await page.waitForFunction(() => navigator.serviceWorker.controller !== null)
 
-  await context.setOffline(true)
+  await cutServer()
   await page.reload()
 
   // The login screen is part of the shell, so it renders from the cache with no server.
@@ -37,14 +45,14 @@ test('the worker precaches the web app manifest', async ({ page }) => {
   expect(cached).toBe(true)
 })
 
-test('the typeface renders offline from the first visit', async ({ page, context }) => {
+test('the typeface renders offline from the first visit', async ({ page }) => {
   await page.goto(appUrl('/'))
   await page.waitForFunction(() => navigator.serviceWorker.controller !== null)
 
   const failed: string[] = []
   page.on('requestfailed', (request) => failed.push(request.url()))
 
-  await context.setOffline(true)
+  await cutServer()
   await page.reload()
   await expect(page.getByLabel('Пароль')).toBeVisible()
 

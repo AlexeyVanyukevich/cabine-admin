@@ -1,6 +1,14 @@
 import { randomUUID } from 'node:crypto'
 import { expect, test, type Page } from '@playwright/test'
-import { appUrl, monthStart, resetAppDb, seedHouse, setOwnerPassword } from './helpers.js'
+import {
+  appUrl,
+  cutServer,
+  monthStart,
+  resetAppDb,
+  restoreServer,
+  seedHouse,
+  setOwnerPassword,
+} from './helpers.js'
 
 const PASSWORD = 'correct horse battery staple'
 const HOUSE = 'Дом у озера'
@@ -56,31 +64,33 @@ test.beforeEach(async ({ page }) => {
 
   await goToMonth(page, MONTH)
 })
+test.afterEach(restoreServer)
 
-test('a cold reload while offline still reaches the calendar and a booking can be captured', async ({
+test('a cold reload with the server out of reach still reaches the calendar and a booking can be captured', async ({
   page,
-  context,
 }) => {
   // The journey the whole branch exists for: the owner reopens the app standing at the houses
-  // with no signal at all, not the app left open from before the signal dropped (the journey
-  // above) and not signed out (offline-shell.spec.ts). Nothing here pages the calendar forward —
-  // a reload always lands back on the real current month (`App.tsx` keeps no month in the URL),
-  // so this deliberately stays on whatever month that is rather than steering toward `MONTH`.
+  // where nothing gets through, not the app left open from before the signal dropped (the
+  // journey below) and not signed out (offline-shell.spec.ts). Nothing here pages the calendar
+  // forward — a reload always lands back on the real current month (`App.tsx` keeps no month in
+  // the URL), so this deliberately stays on whatever month that is rather than steering toward
+  // `MONTH`.
   await page.waitForLoadState('networkidle')
 
-  await context.setOffline(true)
+  await cutServer()
   await page.reload()
 
   // `RequireSession` let this through on an unreachable `/api/me` rather than showing `Trouble`
   // — the fix this test exists to prove. A signed-out reload staying on `/login` is covered by
   // offline-shell.spec.ts.
   await expect(page.getByRole('heading', { name: 'Календарь' })).toBeVisible()
-  // `ConnectionBanner`'s own "Нет сети" line depends on `navigator.onLine`, which — unlike the
-  // fetches below — is not guaranteed to already read false on the very first script execution
-  // of a document loaded while a context is offline; `Calendar`'s own staleness line does not
-  // depend on that signal, only on the read actually having failed, so it is what a cold reload
-  // can rely on to say plainly that the grid is not live.
-  await expect(page.getByText(/Календарь на память, обновлён/)).toBeVisible()
+  // The browser still believes it is online, so the connection banner does not claim there is
+  // no network: it says so only when the browser reports offline. The staleness stamp depends
+  // only on the read having failed, and it is what says plainly that the grid is not live.
+  await expect(page.getByTestId('screen-notice')).toBeVisible()
+  await expect(
+    page.getByTestId('connection-banner').and(page.locator('[data-state="offline"]')),
+  ).toHaveCount(0)
 
   // The last night cell of whatever month this is, rather than a computed date: robust to
   // wherever "today" falls in its month, and proves the cached grid — not just the shell —
@@ -100,15 +110,8 @@ test('a cold reload while offline still reaches the calendar and a booking can b
   await expect(page.getByRole('button', { name: 'Сохранить' })).toBeEnabled()
   await page.getByRole('button', { name: 'Сохранить' }).click()
 
-  // Proven through the tray, not `ConnectionBanner`'s top line: that line's wording keys off
-  // `useOnline`'s `navigator.onLine` reading, which is a documented hint, not a fact
-  // (web/src/offline/useOffline.ts), and is not guaranteed to already read false on the very
-  // first script of a document that loads into an already-offline context — a pre-existing gap
-  // orthogonal to this finding's session gate and settings cache. `captureOrPost`
-  // (web/src/offline/capture.ts) never consults that signal — it tries the real request and
-  // queues on an actual failure — so the queued booking itself is not affected by it, and the
-  // tray, which lists what IndexedDB actually holds, is the reliable place to see that.
-  // Clicking the same cell again opens it, exactly as `Calendar.openBooking` does for any
+  // Proven through the tray, which lists what IndexedDB actually holds: `captureOrPost`
+  // (web/src/offline/capture.ts) tries the real request and queues on an actual failure. Clicking the same cell again opens it, exactly as `Calendar.openBooking` does for any
   // pending night.
   await lastNight.click()
   const tray = page.getByLabel('Не отправлено')

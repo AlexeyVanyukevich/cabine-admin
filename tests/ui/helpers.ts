@@ -6,6 +6,7 @@ import { createHouseResource, type HouseShape } from '../../server/src/engine/ho
 
 interface Runtime {
   baseURL: string
+  controlURL: string
   databaseUrl: string
   engineUrl: string
   engineAdminKey: string
@@ -22,6 +23,39 @@ export function runtime(): Runtime {
 
 export function appUrl(path: string): string {
   return `${runtime().baseURL}${path}`
+}
+
+/**
+ * Makes the server unreachable while the browser still believes it is online: new connections
+ * are refused and open ones dropped (`server-cut.ts`). A spec that cuts restores in `afterEach`,
+ * because the server is shared and a test that fails mid-cut would leave every later one offline.
+ */
+export async function cutServer(): Promise<void> {
+  await switchServer('cut')
+}
+
+/** Undoes `cutServer`. Harmless when nothing was cut. */
+export async function restoreServer(): Promise<void> {
+  await switchServer('restore')
+}
+
+/**
+ * Proves the switch took before returning: a cut that silently did nothing would let a journey
+ * "survive without the server" while the server answered every request.
+ */
+async function switchServer(action: 'cut' | 'restore'): Promise<void> {
+  const response = await fetch(`${runtime().controlURL}/${action}`, { method: 'POST' })
+  if (response.status !== 204) throw new Error(`The server switch refused ${action}`)
+
+  const reachable = await fetch(appUrl('/api/health')).then(
+    () => true,
+    () => false,
+  )
+  if (reachable !== (action === 'restore')) {
+    throw new Error(
+      `The server is ${reachable ? 'still reachable' : 'unreachable'} after ${action}`,
+    )
+  }
 }
 
 /**

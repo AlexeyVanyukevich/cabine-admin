@@ -3,9 +3,13 @@ import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { PostgreSqlContainer } from '@testcontainers/postgresql'
 import { startEngine } from '../../server/tests/integration/engine-harness.js'
+import { startServerCut } from './server-cut.js'
 
 const REPO = resolve(import.meta.dirname, '../..')
+/** What the browser opens. The server itself sits behind a switch a journey can cut. */
 export const PORT = 4123
+const SERVER_PORT = 4124
+const CONTROL_PORT = 4125
 
 /**
  * Boots the whole product the way a deployment does: this project's Postgres, a real booking
@@ -25,7 +29,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     DATABASE_URL: databaseUrl,
     ENGINE_URL: engine.url,
     ENGINE_API_KEY: engine.apiKey,
-    PORT: String(PORT),
+    PORT: String(SERVER_PORT),
     LOG_LEVEL: 'warn',
     NODE_ENV: 'test',
     // Every journey signs in, and they all come from 127.0.0.1, so the real limit of 10 a
@@ -55,13 +59,19 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   server.stdout.on('data', (chunk: Buffer) => process.stdout.write(`[server] ${chunk}`))
   server.stderr.on('data', (chunk: Buffer) => process.stderr.write(`[server] ${chunk}`))
 
-  await waitForHealth()
+  await waitForHealth(SERVER_PORT)
+  const cut = await startServerCut({
+    port: PORT,
+    targetPort: SERVER_PORT,
+    controlPort: CONTROL_PORT,
+  })
 
   // The specs run in their own processes, so the connection details go through a file.
   writeFileSync(
     resolve(REPO, 'tests/ui/.runtime.json'),
     JSON.stringify({
       baseURL: `http://127.0.0.1:${PORT}`,
+      controlURL: `http://127.0.0.1:${CONTROL_PORT}`,
       databaseUrl,
       engineUrl: engine.url,
       engineAdminKey: engine.adminKey,
@@ -69,17 +79,18 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   )
 
   return async () => {
+    await cut.stop()
     server.kill('SIGTERM')
     await engine.stop()
     await db.stop()
   }
 }
 
-async function waitForHealth(): Promise<void> {
+async function waitForHealth(port: number): Promise<void> {
   const deadline = Date.now() + 60_000
   while (Date.now() < deadline) {
     try {
-      const response = await fetch(`http://127.0.0.1:${PORT}/api/health`)
+      const response = await fetch(`http://127.0.0.1:${port}/api/health`)
       if (response.ok) return
     } catch {
       // Not listening yet.

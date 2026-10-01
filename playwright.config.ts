@@ -18,5 +18,11 @@ export default defineConfig({
       // journeys run at. The viewport comes after the device spread, which sets its own.
       use: { ...devices['Desktop Chrome'], viewport: { width: 390, height: 844 } },
     },
+    {
+      // Every browser on iOS is WebKit, so this is the engine the owner's iPhone runs: touch,
+      // the phone's density and Safari's user agent. Still WebKit on a desktop, not iOS itself.
+      name: 'webkit-iphone',
+      use: { ...devices['iPhone 15'] },
+    },
   ],
 })

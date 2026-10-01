@@ -202,6 +202,18 @@ owner ever could. The first run pulls the image; later runs reuse it.
 Note that `./run test` truncates only this project's tables between cases. The engine keeps
 its bookings for the whole run, so a test that needs free nights books its own window.
 
+The browser journeys run twice: in Chromium at phone width, and in WebKit on an iPhone profile,
+because every browser on iOS is WebKit. `./run` does not install the browsers; the first time,
+run `npx playwright install chromium webkit`. Each journey seeds its own houses, each with its
+own engine resource, so no two journeys — and no two browsers — share a night.
+
+The server sits behind a switch that a journey can cut: new connections are refused and open
+ones dropped, while the browser still believes it is online. The journeys that reload with no
+way through use it, because WebKit's offline emulation fails a navigation before the service
+worker can answer it. Journeys about the browser itself going offline still use Playwright's
+`setOffline`. WebKit here is a desktop build: offline behaviour on an actual iPhone is checked
+by hand in the iOS Simulator, which opens `http://localhost:4000` from `./run start`.
+
 ## Deployment
 
 `Dockerfile` builds both workspaces and ships `server/dist` beside the built SPA, so a single

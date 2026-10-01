@@ -17,22 +17,6 @@ commit that fixes it.
 - Impact: the owner is told a booking is on its way when it is waiting, and nothing on screen
   says it is stuck until the tray is opened.
 
-## Browser journeys run only in Chromium, though the owner's phone may run Safari
-
-- Where: `playwright.config.ts`, `projects` (one, `Desktop Chrome` at phone width)
-- Found: 2026-10-01, while reviewing the offline and dropdown fixes
-- Problem: every journey, and every check made while fixing the backlog, ran in Chromium alone,
-  with only Chromium installed for Playwright. Every browser on iOS uses WebKit, so an iPhone
-  never runs what the suite checks. Behaviour that differs between engines is unverified: the
-  service worker and offline reload, `document.fonts`, `appearance: none` on the currency
-  `select`, touch selection on the calendar.
-- Impact: a defect only in Safari reaches the owner with a green suite behind it. Nothing has
-  been seen to fail there; nothing has been checked there.
-- Blocked: a WebKit project on an iPhone profile is written and passes, but fails intermittently
-  while the booking engine answers a used-up rate limit with `500` instead of `429`. That defect,
-  and the engine's missing support for consumers' integration tests, are in the engine's own
-  `docs/backlog.md`. The commit adding the project waits on branch `test/webkit-journeys`.
-
 ## Browser journeys pick their month in UTC while the calendar opens on the local one
 
 - Where: `tests/ui/helpers.ts`, `monthStart()`; used by `houses-guests.spec.ts`,

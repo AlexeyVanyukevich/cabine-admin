@@ -8,6 +8,11 @@ import { createHouseResource } from '../../src/engine/house-resource.js'
 export interface EngineHandle {
   url: string
   apiKey: string
+  /**
+   * The wider key the houses are seeded with. Never handed to the app, which runs on `apiKey`
+   * alone; only test setup uses it, to create a house's resource.
+   */
+  adminKey: string
   /** Two day-based houses anchored at 15:00, open every day of the week. */
   resourceIds: string[]
   stop: () => Promise<void>
@@ -96,6 +101,7 @@ export async function startEngine(): Promise<EngineHandle> {
   return {
     url,
     apiKey: siteBackend,
+    adminKey: backOffice,
     resourceIds,
     stop: async () => {
       await consoleContainer.stop()
@@ -135,7 +141,7 @@ async function bootstrapKeys(
 
 /**
  * `site_backend` cannot create resources, so the houses are seeded with a second, wider key
- * that is then discarded — tests must exercise the same authority production has.
+ * that the app never sees — tests must exercise the same authority production has.
  *
  * The shape comes from `createHouseResource`, the same function the setup command uses, so
  * the houses these tests run against are the houses production creates.

@@ -63,8 +63,8 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     JSON.stringify({
       baseURL: `http://127.0.0.1:${PORT}`,
       databaseUrl,
-      houseA: engine.resourceIds[0],
-      houseB: engine.resourceIds[1],
+      engineUrl: engine.url,
+      engineAdminKey: engine.adminKey,
     }),
   )
 

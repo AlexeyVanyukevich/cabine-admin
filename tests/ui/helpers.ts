@@ -2,12 +2,13 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { hash } from '@node-rs/argon2'
 import pg from 'pg'
+import { createHouseResource, type HouseShape } from '../../server/src/engine/house-resource.js'
 
 interface Runtime {
   baseURL: string
   databaseUrl: string
-  houseA: string
-  houseB: string
+  engineUrl: string
+  engineAdminKey: string
 }
 
 let cached: Runtime | undefined
@@ -28,9 +29,7 @@ export function appUrl(path: string): string {
  *
  * Built with `Date.UTC` so December rolls into January — adding to the month number and
  * padding it produces "2026-13-01", which renders no nights at all and fails only in
- * December. Each spec file takes a different offset, because `resetAppDb` clears this
- * project's tables while the engine keeps its bookings for the whole run: two files booking
- * the same dates would collide on whichever ran second.
+ * December.
  */
 export function monthStart(offset: number): string {
   const now = new Date()
@@ -94,12 +93,30 @@ export async function bookViaPage(
   }, payload)
 }
 
-/** `which` picks one of the harness's two engine resources; a house owns its resource alone. */
+/**
+ * The two shapes the harness's own houses have. They deliberately differ in check-in time, so a
+ * hardcoded 15:00 shows up as a wrong calendar for one house rather than passing everywhere.
+ */
+const SHAPES: Record<'A' | 'B', HouseShape> = {
+  A: { timezone: 'Europe/Warsaw', checkInTime: '15:00' },
+  B: { timezone: 'Europe/Warsaw', checkInTime: '14:00' },
+}
+
+/**
+ * Every call creates the house's own engine resource, so no two tests — and no two browser
+ * projects in one run — ever share a night. The engine keeps its bookings for the whole run,
+ * exactly as in production; a fresh resource is what keeps one test's bookings out of the next.
+ */
 export async function seedHouse(name = 'Дом у озера', which: 'A' | 'B' = 'A'): Promise<string> {
+  const resourceId = await createHouseResource(
+    runtime().engineUrl,
+    runtime().engineAdminKey,
+    SHAPES[which],
+  )
   return withDb(async (client) => {
     const house = await client.query<{ id: string }>(
       'insert into houses (engine_resource_id, name, price_per_night) values ($1, $2, $3) returning id',
-      [which === 'A' ? runtime().houseA : runtime().houseB, name, 30000],
+      [resourceId, name, 30000],
     )
     const id = house.rows[0]!.id
     await client.query(

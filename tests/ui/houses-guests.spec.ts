@@ -17,11 +17,7 @@ const addDays = (date: string, days: number) => iso(Date.parse(`${date}T00:00:00
 
 const MONTH = monthStart(3)
 
-/**
- * Each case names its own day, rather than drawing from a shared counter. Playwright
- * re-evaluates the module, so a module-level counter silently restarts and two tests book the
- * same night — which the engine, keeping its bookings for the whole run, then refuses.
- */
+/** The nights a case books, named in the case itself. */
 function stay(dayOffset: number, nights = 2) {
   const checkIn = addDays(MONTH, dayOffset)
   return { checkIn, checkOut: addDays(checkIn, nights) }

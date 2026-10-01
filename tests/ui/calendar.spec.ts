@@ -8,16 +8,10 @@ const DAY_MS = 86_400_000
 const iso = (ms: number) => new Date(ms).toISOString().slice(0, 10)
 const addDays = (date: string, days: number) => iso(Date.parse(`${date}T00:00:00Z`) + days * DAY_MS)
 
-/** The month after this one: one click away, and empty of anything the other specs booked. */
+/** The month after this one: one click away, and every night in it still bookable. */
 const MONTH = monthStart(1)
 
-/**
- * `resetAppDb` clears this project's tables, but the engine keeps its bookings for the whole
- * run, so each case names days of its own inside that month.
- *
- * The offset is explicit rather than drawn from a counter: Playwright re-evaluates the
- * module, so module-level mutable state silently restarts and two cases book the same night.
- */
+/** The nights a case books, named in the case itself. */
 function stay(dayOffset: number, nights = 2) {
   const checkIn = addDays(MONTH, dayOffset)
   return { checkIn, checkOut: addDays(checkIn, nights), month: MONTH.slice(0, 7) }

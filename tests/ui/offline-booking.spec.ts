@@ -14,8 +14,7 @@ const DAY_MS = 86_400_000
 const addDays = (date: string, days: number): string =>
   new Date(Date.parse(`${date}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10)
 
-// Pick an offset no other spec uses; the engine's bookings outlive resetAppDb. calendar.spec.ts
-// takes 1, houses-guests.spec.ts takes 3 — 6 is free.
+// A future month, so every night in it can still be booked.
 const MONTH = monthStart(6)
 
 /** The month state always starts on the current month, even mid-test, so every journey below

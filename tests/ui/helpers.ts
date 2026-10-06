@@ -61,15 +61,17 @@ async function switchServer(action: 'cut' | 'restore'): Promise<void> {
 /**
  * The first day of the month `offset` months from now, as `YYYY-MM-DD`.
  *
- * Built with `Date.UTC` so December rolls into January — adding to the month number and
- * padding it produces "2026-13-01", which renders no nights at all and fails only in
- * December.
+ * "Now" is the local month, because that is the one the calendar opens on and the journeys
+ * page forward from; the browser runs in this process's zone. Counting from the UTC month
+ * lands a journey one month off for the hours the two dates disagree.
+ *
+ * The month is counted as a single number so December rolls into January — adding to the
+ * month and padding it produces "2026-13-01", which renders no nights at all.
  */
 export function monthStart(offset: number): string {
   const now = new Date()
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + offset, 1))
-    .toISOString()
-    .slice(0, 10)
+  const zero = now.getFullYear() * 12 + now.getMonth() + offset
+  return `${Math.floor(zero / 12)}-${String((zero % 12) + 1).padStart(2, '0')}-01`
 }
 
 async function withDb<T>(work: (client: pg.Client) => Promise<T>): Promise<T> {

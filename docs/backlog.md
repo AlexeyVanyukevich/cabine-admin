@@ -4,6 +4,16 @@ What is known to be wrong and not yet fixed, newest first. The rule for this fil
 `backlog.md`, imported by [CLAUDE.md](../CLAUDE.md): one entry per finding, deleted by the
 commit that fixes it.
 
+## Booking counts in the connection banner use one plural for every number above one
+
+- Where: `web/src/offline/ConnectionBanner.tsx`, the waiting and conflict lines
+- Found: 2026-10-06, while fixing the banner's "sending" line
+- Problem: the noun and verb are chosen by `count === 1` alone, so 2–4 read correctly but 5
+  reads "5 брони ждут отправки" (should be "броней"), and 21 reads "21 брони требуют внимания"
+  (should be "21 бронь требует"). Russian needs the three-way choice `Intl.PluralRules('ru')`
+  gives. Queue five bookings offline and read the banner.
+- Impact: ungrammatical text in front of the owner once five or more bookings are queued.
+
 ## A booking waiting to be sent looks the same as a confirmed one
 
 - Where: `web/src/calendar/timeline.css`, `.timeline__cell--queued`

@@ -54,19 +54,14 @@ never reinterprets one already agreed. Nothing in this project converts between 
 
 ## Conventions
 
-The shared ones come from the `dev-kit` package, one import per rule. A shared rule is corrected
-in the kit, never restated or overridden here; declining one means deleting its line and saying
-why in `CONTRIBUTING.md`.
+The shared ones come from the `dev-kit` package, one import per section. `common` and `testing`
+load here; `backend` loads in `server/CLAUDE.md` and `ui` in `web/CLAUDE.md`, so a session reads
+the section for the workspace it works in. Start sessions at the repository root, or the
+workspaces' imports are not followed. A shared rule is corrected in the kit, never restated or
+overridden here; declining one means saying why in `CONTRIBUTING.md`.
 
-@node_modules/dev-kit/rules/typescript.md
-@node_modules/dev-kit/rules/http.md
-@node_modules/dev-kit/rules/layout.md
-@node_modules/dev-kit/rules/testing.md
-@node_modules/dev-kit/rules/commits.md
-@node_modules/dev-kit/rules/documentation.md
-@node_modules/dev-kit/rules/writing.md
-@node_modules/dev-kit/rules/review.md
-@node_modules/dev-kit/rules/backlog.md
+@node_modules/dev-kit/common/rules.md
+@node_modules/dev-kit/testing/rules.md
 
 **`CONTRIBUTING.md` holds this repository's own conventions**: where the shared layout sits
 under `server/`, the error codes beyond the shared table, money and dates, the generated engine

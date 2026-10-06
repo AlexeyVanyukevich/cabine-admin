@@ -1,5 +1,5 @@
 {
-  "extends": "dev-kit/tsconfig/node",
+  "extends": "dev-kit/backend/tsconfig",
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "."

@@ -8,9 +8,11 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 
 # This script is what installs dependencies, so it cannot source out of node_modules before the
 # kit is there. The test is for the file rather than the directory: a checkout installed before
-# the kit became a dependency has node_modules without it.
-[ -f node_modules/dev-kit/sh/lib.sh ] || npm install
-source node_modules/dev-kit/sh/lib.sh
+# the kit became a dependency has node_modules without it. The token is the kit's documented
+# bootstrap: only a project whose .npmrc reads ${GITHUB_TOKEN} needs one.
+[ -f node_modules/dev-kit/common/lib.sh ] ||
+  GITHUB_TOKEN="${GITHUB_TOKEN:-$(gh auth token 2>/dev/null || true)}" npm install
+source node_modules/dev-kit/common/lib.sh
 
 load_env_file
 

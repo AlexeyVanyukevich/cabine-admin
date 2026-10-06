@@ -5,12 +5,13 @@
 The conventions this project shares with its siblings — TypeScript, HTTP errors, code layout,
 testing, commits, documentation, writing, review and the backlog — come from the `dev-kit`
 package, and are not restated here. After `npm install`, or the first `./run`, which does it,
-they are in `node_modules/dev-kit/rules/`, and `node_modules/dev-kit/README.md` says what each
-one covers.
+they are in `node_modules/dev-kit/`, one directory per section, and
+`node_modules/dev-kit/README.md` says what each section covers.
 
-[CLAUDE.md](CLAUDE.md) imports every one of them, so an agent in the repository reads the same
-text. A shared rule that is wrong is corrected in the kit and arrives here with the next version
-bump. Declining one means deleting its import from `CLAUDE.md` and saying why in this file.
+[CLAUDE.md](CLAUDE.md) imports the `common` and `testing` sections, `server/CLAUDE.md` the
+`backend` one and `web/CLAUDE.md` the `ui` one, so an agent reads the same text a contributor
+does. A shared rule that is wrong is corrected in the kit and arrives here with the next version
+bump. Declining one means saying why in this file.
 
 Everything below is this repository's own.
 

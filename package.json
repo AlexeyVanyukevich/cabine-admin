@@ -9,7 +9,7 @@
   "engines": {
     "node": ">=24.0.0"
   },
-  "prettier": "dev-kit/prettier",
+  "prettier": "dev-kit/common/prettier",
   "scripts": {
     "test": "npm run --workspace server test",
     "test:ui": "playwright test",
@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
-    "dev-kit": "github:AlexeyVanyukevich/dev-kit#v1.2.0",
+    "dev-kit": "github:AlexeyVanyukevich/dev-kit#v2.1.0",
     "prettier": "^3.9.6",
     "typescript": "^7.0.2"
   },

@@ -175,24 +175,35 @@
 }
 
 /*
- * Captured, not yet agreed. Same lit block, but the dashed edge and the corner mark say "sent"
- * and "hoped for" rather than "the engine confirms this" — waiting and sending read the same to
- * the owner, so both states share this treatment.
+ * Captured, not yet agreed: a window whose lamp is not yet on. Still warm, because the night is
+ * held as far as the owner is concerned, but pale where a confirmed stay is solid, and edged in
+ * dashes. The difference is in lightness as well as pattern, so it survives a glance and either
+ * theme. Waiting and sending read the same to the owner, so both states share this treatment.
+ *
+ * The edge runs around the stay, not around each night: the borders between nights are dropped,
+ * or a long stay reads as a stack of dashed boxes.
  */
 .timeline__cell--queued::before {
-  outline: 2px dashed var(--water);
-  outline-offset: -2px;
+  background: var(--lit-soft);
+  border: 2px dashed var(--lit-deep);
 }
 
-.timeline__cell--queued::after {
-  content: '';
-  position: absolute;
-  bottom: 4px;
-  right: 4px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--water);
+.timeline__cell--queued.timeline__cell--start::before {
+  border-bottom: none;
+}
+
+.timeline__cell--queued.timeline__cell--middle::before {
+  border-top: none;
+  border-bottom: none;
+}
+
+.timeline__cell--queued.timeline__cell--end::before {
+  border-top: none;
+}
+
+/* Ahead of the dark theme's label colour, which is written for the solid fill. */
+.timeline__cell--queued .timeline__label {
+  color: var(--lit-deep);
 }
 
 /* The engine has already refused this one. Distinct from `--orphan` (a confirmed booking

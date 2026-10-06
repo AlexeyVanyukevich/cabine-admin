@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { expect, test, type Page } from '@playwright/test'
 import {
   appUrl,
+  bookViaPage,
   cutServer,
   monthStart,
   resetAppDb,
@@ -250,3 +251,85 @@ test('a night taken while offline is escalated, not silently dropped', async ({
   expect(bookings.filter((booking) => booking.guest?.name === 'Аня')).toHaveLength(0)
   expect(bookings.filter((booking) => booking.guest?.name === 'Пётр')).toHaveLength(1)
 })
+
+/** WCAG relative-luminance contrast between two computed `rgb(…)` colours. */
+function contrast(a: string, b: string): number {
+  const luminance = (colour: string): number => {
+    const [r, g, b] = (colour.match(/[\d.]+/g) ?? []).slice(0, 3).map((part) => {
+      const channel = Number(part) / 255
+      return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
+    }) as [number, number, number]
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+  }
+  const [lighter, darker] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number]
+  return (lighter + 0.05) / (darker + 0.05)
+}
+
+/** What the block behind a night is drawn with. */
+function blockStyle(page: Page, date: string) {
+  return night(page, date).evaluate((cell) => {
+    const style = getComputedStyle(cell, '::before')
+    return {
+      fill: style.backgroundColor,
+      edge: style.borderLeftColor,
+      edgeStyle: style.borderLeftStyle,
+      top: style.borderTopStyle,
+      bottom: style.borderBottomStyle,
+      label: getComputedStyle(cell.querySelector('.timeline__label') ?? cell).color,
+    }
+  })
+}
+
+for (const colorScheme of ['light', 'dark'] as const) {
+  test(`a booking waiting to be sent does not look confirmed, in the ${colorScheme} theme`, async ({
+    page,
+    context,
+  }) => {
+    const confirmed = addDays(MONTH, 14)
+    const queuedIn = addDays(MONTH, 20)
+    const queuedMiddle = addDays(queuedIn, 1)
+    const queuedLast = addDays(queuedIn, 2)
+
+    const houseId = await page.evaluate(async () => {
+      const response = await fetch('/api/houses', { credentials: 'same-origin' })
+      return ((await response.json()) as Array<{ id: string }>)[0]!.id
+    })
+    await bookViaPage(page, {
+      house_id: houseId,
+      check_in: confirmed,
+      check_out: addDays(confirmed, 2),
+      guest: { name: 'Пётр', phone: '+375291112233' },
+      price_per_night: 30000,
+      addons: [],
+      deposit: 0,
+    })
+    await page.reload()
+    await goToMonth(page, MONTH)
+    await page.waitForLoadState('networkidle')
+    await expect(night(page, confirmed)).toHaveAttribute('data-available', 'false')
+    await expect(night(page, queuedLast)).toBeVisible()
+
+    await context.setOffline(true)
+    await pickNights(page, queuedIn, queuedLast)
+    await page.getByLabel('Имя').fill('Аня')
+    await page.getByLabel('Телефон').fill('+375291234567')
+    await page.getByRole('button', { name: 'Сохранить' }).click()
+    await expect(night(page, queuedIn)).toHaveClass(/timeline__cell--queued/)
+
+    await page.emulateMedia({ colorScheme })
+    const lit = await blockStyle(page, confirmed)
+    const first = await blockStyle(page, queuedIn)
+    const middle = await blockStyle(page, queuedMiddle)
+    const last = await blockStyle(page, queuedLast)
+
+    expect(first.fill).not.toBe(lit.fill)
+    expect(first.edgeStyle).toBe('dashed')
+    expect(contrast(first.edge, first.fill)).toBeGreaterThanOrEqual(3)
+    expect(contrast(first.label, first.fill)).toBeGreaterThanOrEqual(4.5)
+
+    // One block with one edge around it, not a dashed box per night.
+    expect([first.top, first.bottom]).toEqual(['dashed', 'none'])
+    expect([middle.top, middle.bottom]).toEqual(['none', 'none'])
+    expect([last.top, last.bottom]).toEqual(['none', 'dashed'])
+  })
+}

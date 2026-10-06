@@ -1,4 +1,4 @@
-import { bannerFor } from './banner'
+import { attentionLine, bannerFor, waitingLine } from './banner'
 import type { Intent } from './intents'
 import type { SyncOutcome } from './sync'
 import './offline.css'
@@ -22,7 +22,6 @@ export function ConnectionBanner({ outcome, sending, intents, onOpenTray, onRetr
   const conflicts = intents.filter((intent) => intent.state === 'conflict').length
   const waiting = intents.length - conflicts
   const state = bannerFor({ outcome, sending, waiting, conflicts })
-  const waitingText = `${waiting} ${waiting === 1 ? 'бронь ждёт' : 'брони ждут'} отправки`
 
   if (state === 'conflicts') {
     return (
@@ -33,7 +32,7 @@ export function ConnectionBanner({ outcome, sending, intents, onOpenTray, onRetr
         data-testid="connection-banner"
         data-state="conflicts"
       >
-        {conflicts === 1 ? 'Одна бронь требует внимания' : `${conflicts} брони требуют внимания`}
+        {attentionLine(conflicts)}
       </button>
     )
   }
@@ -55,7 +54,7 @@ export function ConnectionBanner({ outcome, sending, intents, onOpenTray, onRetr
         data-testid="connection-banner"
         data-state="waiting"
       >
-        Нет сети · {waitingText}
+        Нет сети · {waitingLine(waiting)}
       </button>
     )
   }
@@ -93,7 +92,7 @@ export function ConnectionBanner({ outcome, sending, intents, onOpenTray, onRetr
         data-testid="connection-banner"
         data-state="queued"
       >
-        {waitingText}
+        {waitingLine(waiting)}
       </button>
     )
   }

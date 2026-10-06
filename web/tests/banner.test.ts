@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { bannerFor, type BannerInput, type BannerState } from '../src/offline/banner'
+import {
+  attentionLine,
+  bannerFor,
+  waitingLine,
+  type BannerInput,
+  type BannerState,
+} from '../src/offline/banner'
 
 interface Case extends BannerInput {
   name: string
@@ -124,5 +130,32 @@ const CASES: Case[] = [
 describe('bannerFor', () => {
   it.each(CASES)('$name → $expected', ({ expected, ...input }) => {
     expect(bannerFor(input)).toBe(expected)
+  })
+})
+
+/** Russian picks the noun by the last digits: 1 and 21 take one form, 2–4 and 22 another, 5–20,
+ *  25 and 111 a third. Only 1 is spelled out, as the banner always has. */
+const COUNTS: Array<{ count: number; waiting: string; attention: string }> = [
+  { count: 1, waiting: '1 бронь ждёт отправки', attention: 'Одна бронь требует внимания' },
+  { count: 2, waiting: '2 брони ждут отправки', attention: '2 брони требуют внимания' },
+  { count: 4, waiting: '4 брони ждут отправки', attention: '4 брони требуют внимания' },
+  { count: 5, waiting: '5 броней ждут отправки', attention: '5 броней требуют внимания' },
+  { count: 11, waiting: '11 броней ждут отправки', attention: '11 броней требуют внимания' },
+  { count: 12, waiting: '12 броней ждут отправки', attention: '12 броней требуют внимания' },
+  { count: 21, waiting: '21 бронь ждёт отправки', attention: '21 бронь требует внимания' },
+  { count: 22, waiting: '22 брони ждут отправки', attention: '22 брони требуют внимания' },
+  { count: 25, waiting: '25 броней ждут отправки', attention: '25 броней требуют внимания' },
+  { count: 111, waiting: '111 броней ждут отправки', attention: '111 броней требуют внимания' },
+]
+
+describe('waitingLine', () => {
+  it.each(COUNTS)('$count → $waiting', ({ count, waiting }) => {
+    expect(waitingLine(count)).toBe(waiting)
+  })
+})
+
+describe('attentionLine', () => {
+  it.each(COUNTS)('$count → $attention', ({ count, attention }) => {
+    expect(attentionLine(count)).toBe(attention)
   })
 })

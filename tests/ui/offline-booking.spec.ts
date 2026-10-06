@@ -110,6 +110,10 @@ test('a cold reload with the server out of reach still reaches the calendar and 
   await expect(page.getByRole('button', { name: 'Сохранить' })).toBeEnabled()
   await page.getByRole('button', { name: 'Сохранить' }).click()
 
+  // Queued and not being sent: nothing retries until the browser reports a change, the page
+  // regains focus or the owner asks, so the banner must not say it is sending.
+  await expect(page.getByTestId('connection-banner')).toHaveAttribute('data-state', 'queued')
+
   // Proven through the tray, which lists what IndexedDB actually holds: `captureOrPost`
   // (web/src/offline/capture.ts) tries the real request and queues on an actual failure. Clicking the same cell again opens it, exactly as `Calendar.openBooking` does for any
   // pending night.
@@ -153,8 +157,9 @@ test('a booking taken with no signal reaches the engine when the signal returns'
 
   // Nothing left unsent, and the booking is now the engine's — the calendar refetches once the
   // sync round that sent it completes, so this is the server's own answer, not an optimistic
-  // guess the overlay was already showing.
-  await expect(page.getByText(/ждёт отправки|ждут отправки/)).toBeHidden()
+  // guess the overlay was already showing. No banner at all, rather than no waiting line: the
+  // banner says "sending" while the round is in flight, and only goes once it has finished.
+  await expect(page.getByTestId('connection-banner')).toHaveCount(0)
   await expect(page.getByText('Аня', { exact: true })).toBeVisible()
 
   const bookings = await page.evaluate(async (month: string) => {

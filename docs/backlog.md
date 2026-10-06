@@ -4,19 +4,6 @@ What is known to be wrong and not yet fixed, newest first. The rule for this fil
 `backlog.md`, imported by [CLAUDE.md](../CLAUDE.md): one entry per finding, deleted by the
 commit that fixes it.
 
-## "Отправляем…" stays up while nothing is being sent
-
-- Where: `web/src/offline/ConnectionBanner.tsx`, the `waiting > 0` branch; `useSync` in
-  `web/src/offline/useOffline.ts`
-- Found: 2026-10-01, while moving the cold-reload journeys onto a server cut
-- Problem: with the server out of reach but the browser reporting online, a booking captured
-  after a cold reload is queued, and the banner reads "Отправляем…" from then on. No send is in
-  flight: sync runs only on the `online` event, on focus and from the button, and the outcome
-  stays `idle`, so the banner falls through to its "sending" line. Seen 1.5 s after capture in
-  both engines in `tests/ui/offline-booking.spec.ts`, cold-reload journey.
-- Impact: the owner is told a booking is on its way when it is waiting, and nothing on screen
-  says it is stuck until the tray is opened.
-
 ## A booking waiting to be sent looks the same as a confirmed one
 
 - Where: `web/src/calendar/timeline.css`, `.timeline__cell--queued`

@@ -128,6 +128,7 @@ function AppShell() {
   const banner = (
     <ConnectionBanner
       outcome={sync.outcome}
+      sending={sync.sending}
       intents={sync.intents}
       onOpenTray={openTray}
       // A full navigation, not a client-side one: the session is gone, so there is nothing an

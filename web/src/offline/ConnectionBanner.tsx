@@ -1,9 +1,11 @@
+import { bannerFor } from './banner'
 import type { Intent } from './intents'
 import type { SyncOutcome } from './sync'
 import './offline.css'
 
 interface Props {
   outcome: SyncOutcome
+  sending: boolean
   intents: Intent[]
   onOpenTray: () => void
   onRetry: () => void
@@ -16,11 +18,13 @@ interface Props {
  * `data-state` names which of the banner's messages is up, so a test can tell them apart
  * without depending on their wording.
  */
-export function ConnectionBanner({ outcome, intents, onOpenTray, onRetry }: Props) {
+export function ConnectionBanner({ outcome, sending, intents, onOpenTray, onRetry }: Props) {
   const conflicts = intents.filter((intent) => intent.state === 'conflict').length
   const waiting = intents.length - conflicts
+  const state = bannerFor({ outcome, sending, waiting, conflicts })
+  const waitingText = `${waiting} ${waiting === 1 ? 'бронь ждёт' : 'брони ждут'} отправки`
 
-  if (conflicts > 0) {
+  if (state === 'conflicts') {
     return (
       <button
         className="conn conn--bad"
@@ -34,7 +38,15 @@ export function ConnectionBanner({ outcome, intents, onOpenTray, onRetry }: Prop
     )
   }
 
-  if (outcome === 'offline' && waiting > 0) {
+  if (state === 'sending') {
+    return (
+      <p className="conn conn--wait" data-testid="connection-banner" data-state="sending">
+        Отправляем…
+      </p>
+    )
+  }
+
+  if (state === 'waiting') {
     return (
       <button
         className="conn conn--wait"
@@ -43,12 +55,12 @@ export function ConnectionBanner({ outcome, intents, onOpenTray, onRetry }: Prop
         data-testid="connection-banner"
         data-state="waiting"
       >
-        Нет сети · {waiting} {waiting === 1 ? 'бронь ждёт' : 'брони ждут'} отправки
+        Нет сети · {waitingText}
       </button>
     )
   }
 
-  if (outcome === 'offline') {
+  if (state === 'offline') {
     return (
       <p className="conn conn--wait" data-testid="connection-banner" data-state="offline">
         Нет сети. Календарь показан на память.
@@ -56,7 +68,7 @@ export function ConnectionBanner({ outcome, intents, onOpenTray, onRetry }: Prop
     )
   }
 
-  if (outcome === 'paused') {
+  if (state === 'paused') {
     return (
       <button
         className="conn conn--bad"
@@ -70,11 +82,19 @@ export function ConnectionBanner({ outcome, intents, onOpenTray, onRetry }: Prop
     )
   }
 
-  if (waiting > 0) {
+  if (state === 'queued') {
+    // Not "no network": the browser says it has one, and only a send can tell. The tray it
+    // opens has the button that tries.
     return (
-      <p className="conn conn--wait" data-testid="connection-banner" data-state="sending">
-        Отправляем…
-      </p>
+      <button
+        className="conn conn--wait"
+        type="button"
+        onClick={onOpenTray}
+        data-testid="connection-banner"
+        data-state="queued"
+      >
+        {waitingText}
+      </button>
     )
   }
 

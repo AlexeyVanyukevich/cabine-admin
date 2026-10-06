@@ -523,6 +523,10 @@ Sync runs when the app is open — on reconnect, on focus, after login, and on d
 the Background Sync API, which iOS Safari does not implement: **close the app while offline and
 nothing is sent until it is opened again.** Sync-on-open is the honest baseline.
 
+So a booking can sit queued between rounds — captured on a failed request, with nothing yet due to
+retry it. The connection banner says "sending" only while a round is in flight, and otherwise
+counts what is waiting; that line opens the tray, whose button starts a round.
+
 The two operational failures — `503 engine_unreachable` and `502 engine_rejected_our_key` — are
 logged at error level even though the answer to the owner is a clean one. `401` is never retried:
 the key was revoked or the tenant disabled, and the message must say so, or the owner will spend

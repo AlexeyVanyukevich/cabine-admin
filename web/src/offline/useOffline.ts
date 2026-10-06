@@ -187,6 +187,8 @@ export function useCachedQuery<T>(
 
 export interface Sync {
   outcome: SyncOutcome
+  /** A round is in flight. `outcome` describes the last round, not whether one is running. */
+  sending: boolean
   intents: Intent[]
   syncNow: () => void
   reload: () => void
@@ -215,6 +217,9 @@ export function useSync(): Sync {
   const [outcome, setOutcome] = useState<SyncOutcome>('idle')
   const [intents, setIntents] = useState<Intent[]>([])
   const [syncSerial, setSyncSerial] = useState(0)
+  // Mirrors `inFlight` for rendering. The ref is what guards against overlap; this is only
+  // what the banner reads.
+  const [sending, setSending] = useState(false)
   const online = useOnline()
   // A ref, not state: two overlapping rounds are not two renders' worth of a difference, they
   // are the same tick's worth. A `visibilitychange` during an in-flight round, a redundant
@@ -233,6 +238,7 @@ export function useSync(): Sync {
   const syncNow = useCallback(() => {
     if (inFlight.current) return
     inFlight.current = true
+    setSending(true)
     void runSync({ post: api.post, read: allIntents, save: putIntent, drop: dropIntent })
       .then((result) => {
         setOutcome(result)
@@ -240,6 +246,7 @@ export function useSync(): Sync {
       })
       .finally(() => {
         inFlight.current = false
+        setSending(false)
         reload()
       })
   }, [reload])
@@ -264,5 +271,5 @@ export function useSync(): Sync {
     }
   }, [online, syncNow])
 
-  return { outcome, intents, syncNow, reload, syncSerial }
+  return { outcome, sending, intents, syncNow, reload, syncSerial }
 }

@@ -4,6 +4,16 @@ What is known to be wrong and not yet fixed, newest first. The rule for this fil
 `backlog.md`, imported by [CLAUDE.md](../CLAUDE.md): one entry per finding, deleted by the
 commit that fixes it.
 
+## A confirmed booking's guest name is low-contrast in the light theme
+
+- Where: `web/src/calendar/timeline.css`, `.timeline__label` over `.timeline__cell--lit`
+- Found: 2026-10-06, while redrawing queued bookings
+- Problem: the name on a confirmed block is `--lit-deep` (`#8a5410`) on `--lit` (`#e8a33d`), a
+  contrast of 2.90:1, under the 4.5:1 that 13px text needs. The dark theme's `#2a1c05` on
+  `#d99b45` is 6.89:1. Open the calendar in the light theme on any booked night.
+- Impact: the guest's name — the thing the owner reads the block for — is hard to read on a
+  phone in daylight.
+
 ## Most tests keep their cases in the test body, not in a dataset
 
 - Where: `server/tests/integration/`, `web/tests/`, and some of `server/tests/unit/`

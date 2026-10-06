@@ -17,16 +17,6 @@ commit that fixes it.
 - Impact: the owner is told a booking is on its way when it is waiting, and nothing on screen
   says it is stuck until the tray is opened.
 
-## The harness describes its two houses as both anchored at 15:00
-
-- Where: `server/tests/integration/engine-harness.ts`, the doc comment on
-  `EngineHandle.resourceIds`
-- Found: 2026-10-01, while giving each browser journey its own house
-- Problem: the comment says "Two day-based houses anchored at 15:00"; `seedHouses` in the same
-  file creates one at 15:00 and one at 14:00, on purpose, as its own comment explains.
-- Impact: a reader who trusts the interface writes a test assuming 15:00 for both, and it fails
-  for the second house only.
-
 ## Browser journeys run only in Chromium, though the owner's phone may run Safari
 
 - Where: `playwright.config.ts`, `projects` (one, `Desktop Chrome` at phone width)

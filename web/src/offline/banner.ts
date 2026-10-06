@@ -27,3 +27,21 @@ export function bannerFor({ outcome, sending, waiting, conflicts }: BannerInput)
   if (outcome === 'paused') return 'paused'
   return waiting > 0 ? 'queued' : 'none'
 }
+
+const plural = new Intl.PluralRules('ru')
+
+/** The noun and verb for a count of bookings. Russian has three forms for whole numbers;
+ *  `other` covers only fractions, which a count never is. */
+function forms(count: number, one: string, few: string, many: string): string {
+  const category = plural.select(count)
+  return category === 'one' ? one : category === 'few' ? few : many
+}
+
+export function waitingLine(count: number): string {
+  return `${count} ${forms(count, 'бронь ждёт', 'брони ждут', 'броней ждут')} отправки`
+}
+
+export function attentionLine(count: number): string {
+  if (count === 1) return 'Одна бронь требует внимания'
+  return `${count} ${forms(count, 'бронь требует', 'брони требуют', 'броней требуют')} внимания`
+}

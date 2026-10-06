@@ -33,6 +33,22 @@ Where a spec or an archived plan disagrees with `docs/architecture.md`, the arch
 document is right and the older one is stale: correct the architecture document, do not go and
 consult the spec.
 
+## What a machine needs
+
+Node 24, Docker running, and the GitHub CLI signed in once:
+
+```bash
+gh auth login
+gh auth refresh -s read:packages
+```
+
+The booking engine's test helper, a dev dependency, comes from GitHub Packages, which wants a
+token even to install. `./run` takes it from the CLI's login when it installs dependencies and
+hands it to that install alone; it is never exported into the shell. In GitHub Actions the
+workflow's own `GITHUB_TOKEN` serves instead, given `permissions: packages: read` and access
+to this repository granted on the package. Nothing else needs the token: the engine's image is
+public.
+
 ## Before the first run
 
 The engine must be running before any of this. The calendar cannot say which nights are free
@@ -175,11 +191,13 @@ model, and what happens when the engine is down. Read it before changing anythin
 `./run check` does not run the browser journeys. They drive a built product through a real
 browser and cost a minute of their own, so they stay a deliberate `./run test:ui`.
 
-The server suite runs a **real booking engine** in Docker, built from the sibling checkout,
-rather than a stub. The defects worth catching here live in the half-open night interval, the
+The server suite and the browser journeys run a **real booking engine** in Docker rather than
+a stub. The defects worth catching here live in the half-open night interval, the
 departure-date meeting point, the house's timezone and a genuine `409` under a race — and a
-stub reproduces none of them. The first run builds that image and is slow; later runs reuse
-the layer cache.
+stub reproduces none of them. The engine's own test helper, pinned in `server/package.json`,
+starts the release of the same version, so moving to a newer engine is a version bump here. Its
+per-key rate limit is lifted for the run: a suite sends far more requests a minute than the
+owner ever could. The first run pulls the image; later runs reuse it.
 
 Note that `./run test` truncates only this project's tables between cases. The engine keeps
 its bookings for the whole run, so a test that needs free nights books its own window.
@@ -195,8 +213,11 @@ machine running `docker build` contributes its sources and nothing it installed 
 pattern added to one belongs in the other.
 
 The build stage needs GitHub as well as the npm registry: both workspaces' compiler settings
-come from `dev-kit`, a dev dependency installed from its git host at a pinned tag. The runtime
-image does not contain it.
+come from `dev-kit`, a dev dependency installed from its git host at a pinned tag, and the
+engine's test helper comes from GitHub Packages. The runtime image contains neither. The
+helper's token is passed as a build secret, so it is never written into a layer. Build the
+image with `./run image`, which supplies it the same way an install does; extra arguments go to
+`docker build`.
 
 **It must be reached over HTTPS.** This is not a preference. The session cookie is set
 `Secure`, and browsers refuse to store a `Secure` cookie that arrives over plain HTTP — the

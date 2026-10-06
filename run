@@ -202,7 +202,7 @@ scenario_stop() {
 
 scenario_test() {
   need_node; need_deps; need_docker
-  step "Server suite (Testcontainers builds the engine image on a cold run)"
+  step "Server suite (Testcontainers pulls the pinned engine image on a cold run)"
   npm run --workspace server test
   step "Web unit tests"
   npm run --workspace web test
@@ -266,6 +266,16 @@ scenario_build() {
   ok "server/dist and server/public are ready"
 }
 
+# The production image. Its build stage installs every dependency, the engine's test helper
+# among them, so it needs the token an install does: handed over as a build secret, never left
+# in a layer. Extra arguments go to docker build, so CI can add its own tags.
+scenario_image() {
+  need_docker
+  step "Building the image cabins-admin"
+  with_github_token docker build --secret id=github_token,env=GITHUB_TOKEN -t cabins-admin "$@" .
+  ok "Image cabins-admin is built"
+}
+
 usage() {
   cat <<TEXT
 ${BOLD}./run <scenario>${OFF}
@@ -277,6 +287,7 @@ ${BOLD}./run <scenario>${OFF}
   ${BOLD}test:ui${OFF}        browser journeys against the whole product
   ${BOLD}check${OFF}          types, formatting, and the server and web suites
   ${BOLD}build${OFF}          compile the server and build the SPA
+  ${BOLD}image${OFF}          build the production Docker image
   ${BOLD}migrate${OFF}        apply migrations to the local database
   ${BOLD}owner:password${OFF} set the owner's password (also signs every device out)
   ${BOLD}house:add${OFF}      create a house: its engine resource, then its row here
@@ -298,6 +309,7 @@ case "$SCENARIO" in
   test:ui)        scenario_test_ui ;;
   check)          scenario_check ;;
   build)          scenario_build ;;
+  image)          scenario_image "$@" ;;
   migrate)        scenario_migrate ;;
   owner:password) scenario_password ;;
   house:add)      scenario_house_add "$@" ;;

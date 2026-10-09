@@ -201,7 +201,7 @@
   border-top: none;
 }
 
-/* Ahead of the dark theme's label colour, which is written for the solid fill. */
+/* The pale fill is dark in the dark theme, so the solid block's ink would vanish on it. */
 .timeline__cell--queued .timeline__label {
   color: var(--lit-deep);
 }
@@ -230,7 +230,7 @@
   flex-direction: column;
   gap: 1px;
   padding: 7px 10px;
-  color: var(--lit-deep);
+  color: var(--lit-ink);
   line-height: 1.2;
 }
 
@@ -252,12 +252,6 @@
   font-size: 11px;
   font-weight: 600;
   color: var(--alert);
-}
-
-@media (prefers-color-scheme: dark) {
-  .timeline__label {
-    color: #2a1c05;
-  }
 }
 
 @media (min-width: 620px) {

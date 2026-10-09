@@ -281,7 +281,7 @@ function blockStyle(page: Page, date: string) {
 }
 
 for (const colorScheme of ['light', 'dark'] as const) {
-  test(`a booking waiting to be sent does not look confirmed, in the ${colorScheme} theme`, async ({
+  test(`a confirmed and a waiting booking read apart, in the ${colorScheme} theme`, async ({
     page,
     context,
   }) => {
@@ -321,6 +321,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
     const first = await blockStyle(page, queuedIn)
     const middle = await blockStyle(page, queuedMiddle)
     const last = await blockStyle(page, queuedLast)
+
+    // The guest's name is what the block is read for, on either kind.
+    expect(contrast(lit.label, lit.fill)).toBeGreaterThanOrEqual(4.5)
 
     expect(first.fill).not.toBe(lit.fill)
     expect(first.edgeStyle).toBe('dashed')

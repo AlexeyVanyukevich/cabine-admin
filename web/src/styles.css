@@ -19,6 +19,8 @@
   --lit: #e8a33d;
   --lit-soft: #f7e2be;
   --lit-deep: #8a5410;
+  /* Text on a lit block. Dark in both themes, because the block is light in both. */
+  --lit-ink: #2a1c05;
 
   /* Standing water — the calm half of the palette, used for actions and today. */
   --water: #2e5d63;

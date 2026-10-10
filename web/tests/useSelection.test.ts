@@ -31,157 +31,174 @@ const over = (date: string, houseId = HOUSE, nights = free): SelectionAction => 
   free: nights,
 })
 const up: SelectionAction = { type: 'up' }
+const abandon: SelectionAction = { type: 'abandon' }
+const cancel: SelectionAction = { type: 'cancel' }
+
+const chosen = (checkIn: string, checkOut: string, houseId = HOUSE): SelectionState => ({
+  kind: 'chosen',
+  houseId,
+  checkIn,
+  checkOut,
+})
+/** The first night held, waiting for the last: the range so far is that one night. */
+const anchored = (night: string, checkOut: string, houseId = HOUSE): SelectionState => ({
+  kind: 'anchored',
+  houseId,
+  anchor: night,
+  checkIn: night,
+  checkOut,
+})
 
 function run(...actions: SelectionAction[]): SelectionState {
   return actions.reduce(selectionReducer, idle)
 }
 
-describe('selectionReducer — a mouse', () => {
-  it('turns a drag into a half-open range', () => {
+interface Case {
+  name: string
+  actions: SelectionAction[]
+  expected: SelectionState
+}
+
+const MOUSE: Case[] = [
+  {
     // Two nights selected means a departure on the 22nd.
-    expect(run(press('2026-09-20'), over('2026-09-21'), up)).toMatchObject({
-      kind: 'chosen',
-      checkIn: '2026-09-20',
-      checkOut: '2026-09-22',
-    })
-  })
-
-  it('works when dragged backwards', () => {
-    expect(run(press('2026-09-23'), over('2026-09-21'), up)).toMatchObject({
-      kind: 'chosen',
-      checkIn: '2026-09-21',
-      checkOut: '2026-09-24',
-    })
-  })
-
-  // An occupied night stops the drag rather than swallowing it: a selection that silently
-  // skipped a booked night would submit a stay the engine refuses.
-  it('stops at an occupied night instead of jumping over it', () => {
-    const nights = ['2026-09-20', '2026-09-21']
-    expect(
-      run(press('2026-09-20', HOUSE, nights), over('2026-09-23', HOUSE, nights), up),
-    ).toMatchObject({ checkIn: '2026-09-20', checkOut: '2026-09-22' })
-  })
-
-  it('ignores another house passing under the pointer', () => {
-    expect(run(press('2026-09-20'), over('2026-09-22', OTHER), up)).toMatchObject({
-      kind: 'chosen',
-      houseId: HOUSE,
-      checkIn: '2026-09-20',
-      checkOut: '2026-09-21',
-    })
-  })
-
-  // Nothing about a mouse stops it dragging, so a click that never left its night was meant as
-  // that night alone. Holding it for a second click would cost the owner a click on every stay.
-  it('books one night when a night is clicked without dragging', () => {
-    expect(run(press('2026-09-20'), up)).toEqual({
-      kind: 'chosen',
-      houseId: HOUSE,
-      checkIn: '2026-09-20',
-      checkOut: '2026-09-21',
-    })
-  })
-
-  it('closes a range a tap began when the last night is clicked', () => {
-    expect(run(down('2026-09-20'), up, press('2026-09-22'), up)).toMatchObject({
-      kind: 'chosen',
-      checkIn: '2026-09-20',
-      checkOut: '2026-09-23',
-    })
-  })
-})
+    name: 'turns a drag into a half-open range',
+    actions: [press('2026-09-20'), over('2026-09-21'), up],
+    expected: chosen('2026-09-20', '2026-09-22'),
+  },
+  {
+    name: 'works when dragged backwards',
+    actions: [press('2026-09-23'), over('2026-09-21'), up],
+    expected: chosen('2026-09-21', '2026-09-24'),
+  },
+  {
+    // An occupied night stops the drag rather than swallowing it: a selection that silently
+    // skipped a booked night would submit a stay the engine refuses.
+    name: 'stops at an occupied night instead of jumping over it',
+    actions: [
+      press('2026-09-20', HOUSE, ['2026-09-20', '2026-09-21']),
+      over('2026-09-23', HOUSE, ['2026-09-20', '2026-09-21']),
+      up,
+    ],
+    expected: chosen('2026-09-20', '2026-09-22'),
+  },
+  {
+    name: 'ignores another house passing under the pointer',
+    actions: [press('2026-09-20'), over('2026-09-22', OTHER), up],
+    expected: chosen('2026-09-20', '2026-09-21'),
+  },
+  {
+    // Nothing about a mouse stops it dragging, so a click that never left its night was meant
+    // as that night alone. Holding it for a second click would cost the owner a click on every
+    // stay.
+    name: 'books one night when a night is clicked without dragging',
+    actions: [press('2026-09-20'), up],
+    expected: chosen('2026-09-20', '2026-09-21'),
+  },
+  {
+    name: 'closes a range a tap began when the last night is clicked',
+    actions: [down('2026-09-20'), up, press('2026-09-22'), up],
+    expected: chosen('2026-09-20', '2026-09-23'),
+  },
+]
 
 // A finger cannot drag across the grid: the browser keeps the touch on the night it began on,
 // and moving it scrolls. So a stay is picked as two taps, first night then last.
-describe('selectionReducer — two taps', () => {
-  it('holds the first tap as check-in and waits for the last night', () => {
-    expect(run(down('2026-09-20'), up)).toEqual({
-      kind: 'anchored',
-      houseId: HOUSE,
-      anchor: '2026-09-20',
-      checkIn: '2026-09-20',
-      checkOut: '2026-09-21',
-    })
-  })
-
-  it('closes the range on the second tap', () => {
-    expect(run(down('2026-09-20'), up, down('2026-09-22'), up)).toEqual({
-      kind: 'chosen',
-      houseId: HOUSE,
-      checkIn: '2026-09-20',
-      checkOut: '2026-09-23',
-    })
-  })
-
-  it('accepts the last night tapped before the first', () => {
-    expect(run(down('2026-09-23'), up, down('2026-09-21'), up)).toMatchObject({
-      kind: 'chosen',
-      checkIn: '2026-09-21',
-      checkOut: '2026-09-24',
-    })
-  })
-
-  it('books one night when the same night is tapped twice', () => {
-    expect(run(down('2026-09-20'), up, down('2026-09-20'), up)).toMatchObject({
-      kind: 'chosen',
-      checkIn: '2026-09-20',
-      checkOut: '2026-09-21',
-    })
-  })
-
-  // Clamping here would open a form for fewer nights than the owner tapped, and they might not
-  // notice. Starting again from the tapped night keeps every range exactly what was pointed at.
-  it('starts again from the tapped night when an occupied night lies between', () => {
-    const nights = ['2026-09-20', '2026-09-21', '2026-09-23']
-    expect(
-      run(down('2026-09-20', HOUSE, nights), up, down('2026-09-23', HOUSE, nights), up),
-    ).toMatchObject({ kind: 'anchored', checkIn: '2026-09-23', checkOut: '2026-09-24' })
-  })
-
-  it('starts again when the second tap is in another house', () => {
-    expect(run(down('2026-09-20'), up, down('2026-09-22', OTHER), up)).toMatchObject({
-      kind: 'anchored',
-      houseId: OTHER,
-      checkIn: '2026-09-22',
-    })
-  })
-})
+const TWO_TAPS: Case[] = [
+  {
+    name: 'holds the first tap as check-in and waits for the last night',
+    actions: [down('2026-09-20'), up],
+    expected: anchored('2026-09-20', '2026-09-21'),
+  },
+  {
+    name: 'closes the range on the second tap',
+    actions: [down('2026-09-20'), up, down('2026-09-22'), up],
+    expected: chosen('2026-09-20', '2026-09-23'),
+  },
+  {
+    name: 'accepts the last night tapped before the first',
+    actions: [down('2026-09-23'), up, down('2026-09-21'), up],
+    expected: chosen('2026-09-21', '2026-09-24'),
+  },
+  {
+    name: 'books one night when the same night is tapped twice',
+    actions: [down('2026-09-20'), up, down('2026-09-20'), up],
+    expected: chosen('2026-09-20', '2026-09-21'),
+  },
+  {
+    // Clamping here would open a form for fewer nights than the owner tapped, and they might
+    // not notice. Starting again from the tapped night keeps every range exactly what was
+    // pointed at.
+    name: 'starts again from the tapped night when an occupied night lies between',
+    actions: [
+      down('2026-09-20', HOUSE, ['2026-09-20', '2026-09-21', '2026-09-23']),
+      up,
+      down('2026-09-23', HOUSE, ['2026-09-20', '2026-09-21', '2026-09-23']),
+      up,
+    ],
+    expected: anchored('2026-09-23', '2026-09-24'),
+  },
+  {
+    name: 'starts again when the second tap is in another house',
+    actions: [down('2026-09-20'), up, down('2026-09-22', OTHER), up],
+    expected: anchored('2026-09-22', '2026-09-23', OTHER),
+  },
+]
 
 // Scrolling the grid starts with a finger on some night. The browser then cancels the press
 // instead of releasing it, and that must not count as a tap — least of all between the two
 // taps of a stay, which is exactly when the owner scrolls to find the last night.
-describe('selectionReducer — a press that becomes a scroll', () => {
-  it('leaves nothing picked when it began from nothing', () => {
-    expect(run(down('2026-09-20'), { type: 'abandon' })).toEqual(idle)
-  })
+const SCROLL: Case[] = [
+  {
+    name: 'leaves nothing picked when it began from nothing',
+    actions: [down('2026-09-20'), abandon],
+    expected: idle,
+  },
+  {
+    name: 'keeps the first night when it began between the two taps',
+    actions: [down('2026-09-20'), up, down('2026-09-22'), abandon],
+    expected: anchored('2026-09-20', '2026-09-21'),
+  },
+  {
+    name: 'keeps the first night even when the scroll began in another house',
+    actions: [down('2026-09-20'), up, down('2026-09-22', OTHER), abandon],
+    expected: anchored('2026-09-20', '2026-09-21'),
+  },
+]
 
-  it('keeps the first night when it began between the two taps', () => {
-    expect(run(down('2026-09-20'), up, down('2026-09-22'), { type: 'abandon' })).toMatchObject({
-      kind: 'anchored',
-      checkIn: '2026-09-20',
-      checkOut: '2026-09-21',
+const EDGES: Case[] = [
+  {
+    name: 'refuses to start on an occupied night',
+    actions: [down('2026-09-25')],
+    expected: idle,
+  },
+  {
+    name: 'forgets the selection when cancelled',
+    actions: [down('2026-09-20'), up, cancel],
+    expected: idle,
+  },
+]
+
+const GROUPS: Array<[string, Case[]]> = [
+  ['a mouse', MOUSE],
+  ['two taps', TWO_TAPS],
+  ['a press that becomes a scroll', SCROLL],
+  ['edges', EDGES],
+]
+
+for (const [group, cases] of GROUPS) {
+  describe(`selectionReducer — ${group}`, () => {
+    it.each(cases)('$name', ({ actions, expected }) => {
+      expect(run(...actions)).toEqual(expected)
     })
   })
+}
 
-  it('keeps the first night even when the scroll began in another house', () => {
-    expect(
-      run(down('2026-09-20'), up, down('2026-09-22', OTHER), { type: 'abandon' }),
-    ).toMatchObject({ kind: 'anchored', houseId: HOUSE, checkIn: '2026-09-20' })
-  })
-})
-
-describe('selectionReducer — edges', () => {
-  it('refuses to start on an occupied night', () => {
-    expect(run(down('2026-09-25')).kind).toBe('idle')
-  })
-
-  it('ignores a release with no press behind it', () => {
-    const anchored = run(down('2026-09-20'), up)
-    expect(selectionReducer(anchored, up)).toBe(anchored)
-  })
-
-  it('forgets the selection when cancelled', () => {
-    expect(run(down('2026-09-20'), up, { type: 'cancel' })).toEqual(idle)
+// Not a row: what is checked is that the state is the same object, which is what lets React
+// skip the render, not what the state holds.
+describe('selectionReducer — a release with no press behind it', () => {
+  it('returns the state it was given', () => {
+    const anchoredState = run(down('2026-09-20'), up)
+    expect(selectionReducer(anchoredState, up)).toBe(anchoredState)
   })
 })

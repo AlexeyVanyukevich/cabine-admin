@@ -102,51 +102,45 @@ describe('the login rate limit', () => {
   })
 })
 
-describe('the guard', () => {
-  it('refuses a protected route without a session', async () => {
-    const response = await app.inject({ method: 'GET', url: '/api/me' })
-    expect(response.statusCode).toBe(401)
-  })
+type SessionState = 'none' | 'live' | 'deleted' | 'expired'
 
-  it('admits one with a session', async () => {
-    const cookie = (await login()).cookies.find((c) => c.name === 'session')!
-    const response = await app.inject({
-      method: 'GET',
-      url: '/api/me',
-      cookies: { session: cookie.value },
-    })
-    expect(response.statusCode).toBe(200)
-  })
-
-  it('refuses a session that has been deleted — sign out everywhere works', async () => {
-    const cookie = (await login()).cookies.find((c) => c.name === 'session')!
-    await getTestDb().deleteFrom('sessions').execute()
-
-    const response = await app.inject({
-      method: 'GET',
-      url: '/api/me',
-      cookies: { session: cookie.value },
-    })
-    expect(response.statusCode).toBe(401)
-  })
-
-  it('refuses an expired session', async () => {
-    const cookie = (await login()).cookies.find((c) => c.name === 'session')!
+/** The cookie a request carries once its session has been put in the given state. */
+async function sessionIn(state: SessionState): Promise<Record<string, string>> {
+  if (state === 'none') return {}
+  const cookie = (await login()).cookies.find((c) => c.name === 'session')!
+  if (state === 'deleted') await getTestDb().deleteFrom('sessions').execute()
+  if (state === 'expired') {
     await getTestDb()
       .updateTable('sessions')
       .set({ expires_at: new Date(Date.now() - 1000) })
       .execute()
+  }
+  return { session: cookie.value }
+}
 
-    const response = await app.inject({
-      method: 'GET',
-      url: '/api/me',
-      cookies: { session: cookie.value },
-    })
-    expect(response.statusCode).toBe(401)
-  })
+const GUARD: Array<{ name: string; url: string; session: SessionState; expected: number }> = [
+  {
+    name: 'refuses a protected route without a session',
+    url: '/api/me',
+    session: 'none',
+    expected: 401,
+  },
+  { name: 'admits one with a session', url: '/api/me', session: 'live', expected: 200 },
+  {
+    name: 'refuses a session that has been deleted — sign out everywhere works',
+    url: '/api/me',
+    session: 'deleted',
+    expected: 401,
+  },
+  { name: 'refuses an expired session', url: '/api/me', session: 'expired', expected: 401 },
+  { name: 'leaves health public', url: '/api/health', session: 'none', expected: 200 },
+]
 
-  it('leaves health public', async () => {
-    expect((await app.inject({ method: 'GET', url: '/api/health' })).statusCode).toBe(200)
+describe('the guard', () => {
+  it.each(GUARD)('$name', async ({ url, session, expected }) => {
+    const cookies = await sessionIn(session)
+    const response = await app.inject({ method: 'GET', url, cookies })
+    expect(response.statusCode).toBe(expected)
   })
 })
 
